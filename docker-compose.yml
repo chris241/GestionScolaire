@@ -1,0 +1,81 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: gestionscolaire-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: gestionscolaire
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      - gestionscolaire_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d gestionscolaire"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks: [gestionscolaire]
+
+  redis:
+    image: redis:7-alpine
+    container_name: gestionscolaire-redis
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks: [gestionscolaire]
+
+  api:
+    build:
+      context: .
+      dockerfile: src/GestionScolaire.Api/Dockerfile
+    container_name: gestionscolaire-api
+    restart: unless-stopped
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_URLS: http://+:8080
+      DISABLE_HTTPS_REDIRECT: "true"
+      ConnectionStrings__DefaultConnection: "Host=postgres;Port=5432;Database=gestionscolaire;Username=postgres;Password=postgres"
+      ConnectionStrings__Redis: "redis:6379"
+      Jwt__Secret: "docker_dev_super_secret_key_min_32_characters_long"
+      Jwt__Issuer: "GestionScolaire.Api"
+      Jwt__Audience: "GestionScolaire.Client"
+      Jwt__AccessTokenExpirationMinutes: "60"
+      Jwt__RefreshTokenExpirationDays: "7"
+      Cors__AllowedOrigins__0: "http://localhost:5240"
+    ports:
+      - "5230:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8080/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+    networks: [gestionscolaire]
+
+  client:
+    build:
+      context: .
+      dockerfile: client/Dockerfile
+      args:
+        VITE_API_URL: http://localhost:5230/api
+    container_name: gestionscolaire-client
+    restart: unless-stopped
+    ports:
+      - "5240:80"
+    depends_on:
+      - api
+    networks: [gestionscolaire]
+
+networks:
+  gestionscolaire:
+
+volumes:
+  gestionscolaire_pgdata:

@@ -1,0 +1,48 @@
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { AuthProvider } from './lib/AuthContext';
+import { ProtectedRoute } from './lib/ProtectedRoute';
+import { AppLayout } from './components/AppLayout';
+import { Login } from './pages/Login';
+import { Dashboard } from './pages/Dashboard';
+import { Students } from './pages/Students';
+import { Payments } from './pages/Payments';
+import { Grades } from './pages/Grades';
+import { useAuth } from './lib/AuthContext';
+
+// Le tableau de bord est réservé au Directeur pour le moment (les endpoints stats/paiements globaux lui sont restreints côté API).
+function HomeRoute() {
+  const { user } = useAuth();
+  if (user?.role === 'Parent') {
+    return <Navigate to="/notes" replace />;
+  }
+  return <Dashboard />;
+}
+
+function App() {
+  return (
+    <BrowserRouter>
+      <AuthProvider>
+        <Routes>
+          <Route path="/login" element={<Login />} />
+          <Route
+            path="/*"
+            element={
+              <ProtectedRoute>
+                <AppLayout>
+                  <Routes>
+                    <Route path="/" element={<HomeRoute />} />
+                    <Route path="/eleves" element={<Students />} />
+                    <Route path="/notes" element={<Grades />} />
+                    <Route path="/paiements" element={<Payments />} />
+                  </Routes>
+                </AppLayout>
+              </ProtectedRoute>
+            }
+          />
+        </Routes>
+      </AuthProvider>
+    </BrowserRouter>
+  );
+}
+
+export default App;

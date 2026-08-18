@@ -1,0 +1,160 @@
+using GestionScolaire.Domain.Entities;
+using GestionScolaire.Domain.Enums;
+using GestionScolaire.Infrastructure.Identity;
+using Microsoft.EntityFrameworkCore;
+
+namespace GestionScolaire.Infrastructure.Persistence;
+
+/// Données de démonstration pour l'environnement de développement. Idempotent : ne s'exécute que si la base est vide.
+public static class DbSeeder
+{
+    public static async Task SeedAsync(AppDbContext context)
+    {
+        if (await context.Users.AnyAsync()) return;
+
+        var subjects = new[]
+        {
+            new Subject { Name = "Mathématiques", Coefficient = 4 },
+            new Subject { Name = "Français", Coefficient = 4 },
+            new Subject { Name = "Sciences", Coefficient = 3 },
+            new Subject { Name = "Histoire-Géographie", Coefficient = 2 },
+            new Subject { Name = "Anglais", Coefficient = 2 },
+        };
+        context.Subjects.AddRange(subjects);
+
+        var director = new User
+        {
+            Email = "directeur@ecole.mg",
+            PasswordHash = PasswordHasher.Hash("Password123!"),
+            FirstName = "Rina",
+            LastName = "Rakoto",
+            Role = UserRole.Director
+        };
+        context.Users.Add(director);
+
+        var teacherUsers = new[]
+        {
+            new User { Email = "prof.math@ecole.mg", PasswordHash = PasswordHasher.Hash("Password123!"), FirstName = "Jean", LastName = "Andria", Role = UserRole.Teacher },
+            new User { Email = "prof.francais@ecole.mg", PasswordHash = PasswordHasher.Hash("Password123!"), FirstName = "Voahangy", LastName = "Rasoa", Role = UserRole.Teacher },
+        };
+        context.Users.AddRange(teacherUsers);
+
+        var teachers = new[]
+        {
+            new Teacher { User = teacherUsers[0], Specialty = "Mathématiques", HireDate = DateTime.UtcNow.AddYears(-4) },
+            new Teacher { User = teacherUsers[1], Specialty = "Français", HireDate = DateTime.UtcNow.AddYears(-2) },
+        };
+        context.Teachers.AddRange(teachers);
+
+        var classes = new[]
+        {
+            new SchoolClass { Name = "6ème A", Level = "6ème", AcademicYear = "2025-2026", Capacity = 35, HomeroomTeacher = teachers[0] },
+            new SchoolClass { Name = "5ème B", Level = "5ème", AcademicYear = "2025-2026", Capacity = 35, HomeroomTeacher = teachers[1] },
+        };
+        context.Classes.AddRange(classes);
+
+        var studentNames = new (string First, string Last, Gender Gender)[]
+        {
+            ("Tojo", "Randria", Gender.Masculin),
+            ("Fara", "Rasoanaivo", Gender.Feminin),
+            ("Nomena", "Rakotomalala", Gender.Masculin),
+            ("Miora", "Andriamampianina", Gender.Feminin),
+            ("Iarivo", "Ravelojaona", Gender.Masculin),
+            ("Sitraka", "Rabemananjara", Gender.Feminin),
+            ("Fetra", "Rakotondrabe", Gender.Masculin),
+            ("Ony", "Razafindrakoto", Gender.Feminin),
+        };
+
+        var students = new List<Student>();
+        for (var i = 0; i < studentNames.Length; i++)
+        {
+            var (first, last, gender) = studentNames[i];
+            students.Add(new Student
+            {
+                EnrollmentNumber = $"MAT-2026-{(i + 1):000}",
+                FirstName = first,
+                LastName = last,
+                Gender = gender,
+                DateOfBirth = new DateTime(2013, 1, 1, 0, 0, 0, DateTimeKind.Utc).AddDays(i * 17),
+                EnrollmentDate = DateTime.UtcNow.AddMonths(-6),
+                Class = classes[i % 2]
+            });
+        }
+        context.Students.AddRange(students);
+
+        var parentUsers = students.Select((s, i) => new User
+        {
+            Email = $"parent{i + 1}@ecole.mg",
+            PasswordHash = PasswordHasher.Hash("Password123!"),
+            FirstName = $"Parent{i + 1}",
+            LastName = s.LastName,
+            Role = UserRole.Parent
+        }).ToList();
+        context.Users.AddRange(parentUsers);
+
+        for (var i = 0; i < students.Count; i++)
+        {
+            context.StudentParents.Add(new StudentParent
+            {
+                Student = students[i],
+                ParentUser = parentUsers[i],
+                Relationship = "Parent"
+            });
+        }
+
+        var random = new Random(42);
+        const string term = "Trimestre 1";
+
+        foreach (var student in students)
+        {
+            var teacher = student.Class == classes[0] ? teachers[0] : teachers[1];
+
+            foreach (var subject in subjects)
+            {
+                for (var g = 0; g < 2; g++)
+                {
+                    context.Grades.Add(new Grade
+                    {
+                        Student = student,
+                        Subject = subject,
+                        Teacher = teacher,
+                        Class = student.Class,
+                        Score = Math.Round((decimal)(random.NextDouble() * 12 + 8), 1),
+                        MaxScore = 20,
+                        Coefficient = subject.Coefficient,
+                        Type = g == 0 ? EvaluationType.Devoir : EvaluationType.Composition,
+                        Term = term,
+                        EvaluatedAt = DateTime.UtcNow.AddDays(-random.Next(5, 60))
+                    });
+                }
+            }
+
+            var paymentStatus = random.Next(3) switch { 0 => PaymentStatus.Paye, 1 => PaymentStatus.EnAttente, _ => PaymentStatus.EnRetard };
+
+            context.Payments.Add(new Payment
+            {
+                Student = student,
+                Description = "Frais de scolarité — Trimestre 1",
+                Amount = 250000,
+                AcademicYear = "2025-2026",
+                Term = term,
+                DueDate = DateTime.UtcNow.AddDays(-10),
+                Status = paymentStatus,
+                PaidAt = paymentStatus == PaymentStatus.Paye ? DateTime.UtcNow.AddDays(-random.Next(1, 9)) : null,
+                Method = "Mobile Money",
+                InvoiceNumber = $"INV-2026-{student.EnrollmentNumber[^3..]}"
+            });
+
+            context.Attendances.Add(new Attendance
+            {
+                Student = student,
+                Class = student.Class,
+                Date = DateTime.UtcNow.Date,
+                Status = random.Next(6) == 0 ? AttendanceStatus.Absent : AttendanceStatus.Present,
+                RecordedByUserId = director.Id
+            });
+        }
+
+        await context.SaveChangesAsync();
+    }
+}

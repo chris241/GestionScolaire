@@ -1,0 +1,11 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/GestionScolaire.Api/GestionScolaire.Api.csproj" />
+    <Project Path="src/GestionScolaire.Application/GestionScolaire.Application.csproj" />
+    <Project Path="src/GestionScolaire.Domain/GestionScolaire.Domain.csproj" />
+    <Project Path="src/GestionScolaire.Infrastructure/GestionScolaire.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/GestionScolaire.Application.Tests/GestionScolaire.Application.Tests.csproj" />
+  </Folder>
+</Solution>
