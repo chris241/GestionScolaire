@@ -10,6 +10,7 @@ function formatDate(date: string) {
 export function Students() {
   const { user } = useAuth();
   const isParent = user?.role === 'Parent';
+  const isTeacher = user?.role === 'Teacher';
   const [students, setStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -38,9 +39,15 @@ export function Students() {
     <div className="mx-auto max-w-7xl px-6 py-8">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold text-slate">{isParent ? 'Mes enfants' : 'Élèves'}</h1>
+          <h1 className="text-2xl font-semibold text-slate">
+            {isParent ? 'Mes enfants' : isTeacher ? 'Mes élèves' : 'Élèves'}
+          </h1>
           <p className="mt-1 text-sm text-slate-soft">
-            {isParent ? `${students.length} enfant(s) rattaché(s)` : `${students.length} élève(s) inscrit(s)`}
+            {isParent
+              ? `${students.length} enfant(s) rattaché(s)`
+              : isTeacher
+                ? `${students.length} élève(s) dans ma classe`
+                : `${students.length} élève(s) inscrit(s)`}
           </p>
         </div>
         {!isParent && (

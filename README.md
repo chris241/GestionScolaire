@@ -103,12 +103,16 @@ dotnet test tests/GestionScolaire.Application.Tests
   - **Paiements** : liste avec total encaissé/dû et badges de statut
 - **Design system** : palette Slate/Indigo demandée (`#F8FAFC` / `#1E293B` / `#3B82F6`), composants réutilisables typés (`StatCard`, `StatusBadge`, `RecentActivityTable`, `DashboardHeader`).
 - **Données de démonstration** : `DbSeeder` peuplant automatiquement la base en développement.
-- **Accès restreint par rôle Parent** (`IStudentAccessPolicy`) : un compte Parent ne voit que les élèves qui lui sont rattachés via `StudentParent` — `GET /api/students` est filtré automatiquement, et toute tentative d'accès aux notes/paiements/bulletin d'un élève qui n'est pas le sien renvoie `403 Forbidden`. Director et Teacher gardent un accès complet.
+- **Accès restreint par rôle** (`IStudentAccessPolicy`) :
+  - **Parent** : ne voit que les élèves qui lui sont rattachés via `StudentParent` ; pas de tableau de bord ni de saisie de notes (lecture seule) ; page Paiements limitée à ses propres enfants.
+  - **Teacher** : ne voit que les élèves de la classe dont il est titulaire (`SchoolClass.HomeroomTeacher`) ; ne peut consulter/saisir/modifier/supprimer une note que pour ses propres élèves (`403 Forbidden` sinon) ; pas de tableau de bord ni de page Paiements (hors de son périmètre).
+  - **Director** : accès complet, seul rôle à voir le tableau de bord et la liste globale des paiements.
+- **Devise** : montants affichés en Ariary malgache (MGA), sans décimales.
 
 ## Prochaines étapes suggérées
 
 - Écrans CRUD complets pour les classes et la gestion des absences.
 - Tests d'intégration API (WebApplicationFactory), notamment sur `IStudentAccessPolicy`.
 - Pagination sur les listes (élèves, paiements) au-delà du MVP.
-- Restreindre également l'accès Teacher à ses propres classes (actuellement un professeur voit tous les élèves).
+- Gérer le cas d'un professeur non-titulaire (enseignant plusieurs classes sans en être responsable) — l'accès Teacher est aujourd'hui limité à sa classe de titulariat.
 - Sécuriser le dashboard Hangfire (`/hangfire`) et sortir le secret JWT vers un vrai secret manager avant toute mise en production.

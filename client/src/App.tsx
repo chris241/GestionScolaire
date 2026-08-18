@@ -9,10 +9,10 @@ import { Payments } from './pages/Payments';
 import { Grades } from './pages/Grades';
 import { useAuth } from './lib/AuthContext';
 
-// Le tableau de bord est réservé au Directeur pour le moment (les endpoints stats/paiements globaux lui sont restreints côté API).
+// Le tableau de bord est réservé au Directeur (les endpoints stats/paiements globaux lui sont restreints côté API).
 function HomeRoute() {
   const { user } = useAuth();
-  if (user?.role === 'Parent') {
+  if (user?.role === 'Parent' || user?.role === 'Teacher') {
     return <Navigate to="/notes" replace />;
   }
   return <Dashboard />;

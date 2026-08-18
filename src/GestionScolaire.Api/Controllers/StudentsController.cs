@@ -37,6 +37,15 @@ public class StudentsController : ControllerBase
 
             query = query.Where(s => childIds.Contains(s.Id));
         }
+        else if (_currentUser.Role == nameof(UserRole.Teacher))
+        {
+            // MVP : un professeur n'est titulaire (HomeroomTeacher) que d'une seule classe.
+            var teacherClassIds = _context.Classes
+                .Where(c => c.HomeroomTeacher != null && c.HomeroomTeacher.UserId == _currentUser.UserId)
+                .Select(c => c.Id);
+
+            query = query.Where(s => teacherClassIds.Contains(s.ClassId));
+        }
 
         var students = await query
             .OrderBy(s => s.LastName)

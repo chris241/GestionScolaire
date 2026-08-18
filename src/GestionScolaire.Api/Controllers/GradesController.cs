@@ -41,6 +41,8 @@ public class GradesController : ControllerBase
         if (student is null || subject is null)
             return NotFound(new { message = "Élève ou matière introuvable." });
 
+        if (!await HasAccessAsync(request.StudentId)) return Forbid();
+
         var grade = new Grade
         {
             StudentId = request.StudentId,
@@ -71,6 +73,7 @@ public class GradesController : ControllerBase
             .FirstOrDefaultAsync(g => g.Id == id);
 
         if (grade is null) return NotFound();
+        if (!await HasAccessAsync(grade.StudentId)) return Forbid();
 
         grade.Score = request.Score;
         grade.MaxScore = request.MaxScore;
@@ -88,6 +91,7 @@ public class GradesController : ControllerBase
     {
         var grade = await _context.Grades.FindAsync(id);
         if (grade is null) return NotFound();
+        if (!await HasAccessAsync(grade.StudentId)) return Forbid();
 
         _context.Grades.Remove(grade);
         await _context.SaveChangesAsync();

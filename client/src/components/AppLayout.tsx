@@ -6,20 +6,19 @@ import { useAuth } from '../lib/AuthContext';
 const NAV_ITEMS: {
   to: string;
   label: string;
-  parentLabel: string | null;
+  roleLabels: Record<string, string>;
   icon: typeof LayoutDashboard;
   end: boolean;
   hideFor: string[];
 }[] = [
-  { to: '/', label: 'Tableau de bord', parentLabel: null, icon: LayoutDashboard, end: true, hideFor: ['Parent'] },
-  { to: '/eleves', label: 'Élèves', parentLabel: 'Mes enfants', icon: GraduationCap, end: false, hideFor: [] },
-  { to: '/notes', label: 'Notes', parentLabel: null, icon: NotebookPen, end: false, hideFor: [] },
-  { to: '/paiements', label: 'Paiements', parentLabel: null, icon: Wallet, end: false, hideFor: ['Teacher'] },
+  { to: '/', label: 'Tableau de bord', roleLabels: {}, icon: LayoutDashboard, end: true, hideFor: ['Parent', 'Teacher'] },
+  { to: '/eleves', label: 'Élèves', roleLabels: { Parent: 'Mes enfants', Teacher: 'Mes élèves' }, icon: GraduationCap, end: false, hideFor: [] },
+  { to: '/notes', label: 'Notes', roleLabels: {}, icon: NotebookPen, end: false, hideFor: [] },
+  { to: '/paiements', label: 'Paiements', roleLabels: {}, icon: Wallet, end: false, hideFor: ['Teacher'] },
 ];
 
 export function AppLayout({ children }: { children: ReactNode }) {
   const { user, logout } = useAuth();
-  const isParent = user?.role === 'Parent';
   const navItems = NAV_ITEMS.filter((item) => !user || !item.hideFor.includes(user.role));
 
   return (
@@ -33,7 +32,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
         </div>
 
         <nav className="mt-8 flex flex-1 flex-col gap-1">
-          {navItems.map(({ to, label, parentLabel, icon: Icon, end }) => (
+          {navItems.map(({ to, label, roleLabels, icon: Icon, end }) => (
             <NavLink
               key={to}
               to={to}
@@ -47,7 +46,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
               }
             >
               <Icon size={18} strokeWidth={2} />
-              {isParent && parentLabel ? parentLabel : label}
+              {(user && roleLabels[user.role]) || label}
             </NavLink>
           ))}
         </nav>
