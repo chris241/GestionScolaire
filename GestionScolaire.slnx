@@ -6,6 +6,7 @@
     <Project Path="src/GestionScolaire.Infrastructure/GestionScolaire.Infrastructure.csproj" />
   </Folder>
   <Folder Name="/tests/">
+    <Project Path="tests/GestionScolaire.Api.Tests/GestionScolaire.Api.Tests.csproj" />
     <Project Path="tests/GestionScolaire.Application.Tests/GestionScolaire.Application.Tests.csproj" />
   </Folder>
 </Solution>

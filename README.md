@@ -12,7 +12,8 @@ GestionScolaire/
 │   ├── GestionScolaire.Infrastructure  # EF Core (PostgreSQL), JWT, BCrypt, QuestPDF, Hangfire, DbSeeder
 │   └── GestionScolaire.Api             # Controllers ASP.NET Core, Program.cs, Dockerfile
 ├── tests/
-│   └── GestionScolaire.Application.Tests  # xUnit — calcul des moyennes (15 tests)
+│   ├── GestionScolaire.Application.Tests  # xUnit — calcul des moyennes (15 tests)
+│   └── GestionScolaire.Api.Tests          # xUnit — tests d'intégration HTTP (29 tests, Testcontainers PostgreSQL)
 ├── client/                             # React + Vite + TS + Tailwind + Lucide + react-router, Dockerfile (nginx)
 ├── docker-compose.yml                  # Postgres + Redis + api + client
 └── GestionScolaire.slnx
@@ -85,8 +86,11 @@ Ports 5230/5240 choisis pour éviter les conflits avec d'autres projets locaux ;
 ## Tests
 
 ```bash
-dotnet test tests/GestionScolaire.Application.Tests
+dotnet test tests/GestionScolaire.Application.Tests   # unitaires — calcul des moyennes
+dotnet test tests/GestionScolaire.Api.Tests            # intégration — nécessite Docker (Testcontainers)
 ```
+
+Les tests d'intégration démarrent un vrai PostgreSQL éphémère et hébergent l'API en mémoire (`WebApplicationFactory`) : login, filtrage des données par rôle (Director/Teacher/Parent), contrôle d'accès sur les notes/paiements/bulletins (403 attendu hors périmètre), génération de bulletin PDF. Chaque exécution recrée sa propre base et son propre jeu de données via le `DbSeeder`.
 
 ## Fonctionnalités livrées (MVP)
 
@@ -112,7 +116,6 @@ dotnet test tests/GestionScolaire.Application.Tests
 ## Prochaines étapes suggérées
 
 - Écrans CRUD complets pour les classes et la gestion des absences.
-- Tests d'intégration API (WebApplicationFactory), notamment sur `IStudentAccessPolicy`.
 - Pagination sur les listes (élèves, paiements) au-delà du MVP.
 - Gérer le cas d'un professeur non-titulaire (enseignant plusieurs classes sans en être responsable) — l'accès Teacher est aujourd'hui limité à sa classe de titulariat.
 - Sécuriser le dashboard Hangfire (`/hangfire`) et sortir le secret JWT vers un vrai secret manager avant toute mise en production.
