@@ -40,7 +40,7 @@ GestionScolaire/
 dotnet run --project src/GestionScolaire.Api
 ```
 
-Swagger disponible sur `/swagger`, dashboard Hangfire sur `/hangfire`.
+Swagger disponible sur `/swagger`, dashboard Hangfire sur `/hangfire` (protégé par Basic Auth — voir plus bas).
 
 ### Comptes de démonstration (seed, environnement Development uniquement)
 
@@ -74,6 +74,13 @@ docker compose up -d --build
 - Client : http://localhost:5240
 - API : http://localhost:5230 (Swagger sur `/swagger`, healthcheck sur `/health`, dashboard Hangfire sur `/hangfire`)
 - Les migrations EF Core et le seed de démonstration s'exécutent automatiquement au premier démarrage du conteneur `api`.
+
+### Dashboard Hangfire (`/hangfire`)
+
+Protégé par Basic Auth (identifiants distincts du système JWT de l'app, car une navigation directe au navigateur n'envoie pas d'en-tête `Authorization: Bearer`) :
+- Local (`dotnet run`, environnement `Development`) : `admin` / `admin` par défaut, ou via `Hangfire:DashboardUsername` / `Hangfire:DashboardPassword`.
+- Docker : `admin` / `docker_dev_change_me` (variables `Hangfire__DashboardUsername` / `Hangfire__DashboardPassword` dans `docker-compose.yml`).
+- Hors `Development`, `Hangfire:DashboardPassword` doit être explicitement configuré (l'app refuse de démarrer sinon) — pas de mot de passe par défaut en production.
 
 ```bash
 docker compose logs -f api      # suivre les logs de l'API
@@ -112,10 +119,11 @@ Les tests d'intégration démarrent un vrai PostgreSQL éphémère et hébergent
   - **Teacher** : ne voit que les élèves de la classe dont il est titulaire (`SchoolClass.HomeroomTeacher`) ; ne peut consulter/saisir/modifier/supprimer une note que pour ses propres élèves (`403 Forbidden` sinon) ; pas de tableau de bord ni de page Paiements (hors de son périmètre).
   - **Director** : accès complet, seul rôle à voir le tableau de bord et la liste globale des paiements.
 - **Devise** : montants affichés en Ariary malgache (MGA), sans décimales.
+- **Dashboard Hangfire protégé** : `/hangfire` exige une authentification Basic Auth dédiée (`HangfireDashboardAuthorizationFilter`), avec échec au démarrage si aucun mot de passe n'est configuré hors environnement `Development`.
 
 ## Prochaines étapes suggérées
 
 - Écrans CRUD complets pour les classes et la gestion des absences.
 - Pagination sur les listes (élèves, paiements) au-delà du MVP.
 - Gérer le cas d'un professeur non-titulaire (enseignant plusieurs classes sans en être responsable) — l'accès Teacher est aujourd'hui limité à sa classe de titulariat.
-- Sécuriser le dashboard Hangfire (`/hangfire`) et sortir le secret JWT vers un vrai secret manager avant toute mise en production.
+- Sortir le secret JWT et le mot de passe Hangfire vers un vrai secret manager avant toute mise en production (actuellement en variables d'environnement en clair dans `docker-compose.yml`).

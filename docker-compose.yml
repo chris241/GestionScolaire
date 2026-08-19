@@ -45,6 +45,8 @@ services:
       Jwt__AccessTokenExpirationMinutes: "60"
       Jwt__RefreshTokenExpirationDays: "7"
       Cors__AllowedOrigins__0: "http://localhost:5240"
+      Hangfire__DashboardUsername: "admin"
+      Hangfire__DashboardPassword: "docker_dev_change_me"
     ports:
       - "5230:8080"
     depends_on:

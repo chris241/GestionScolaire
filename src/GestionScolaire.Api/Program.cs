@@ -1,8 +1,10 @@
 using System.Text;
+using GestionScolaire.Api;
 using GestionScolaire.Infrastructure;
 using GestionScolaire.Infrastructure.Identity;
 using GestionScolaire.Infrastructure.Persistence;
 using Hangfire;
+using Hangfire.Dashboard;
 using Hangfire.PostgreSql;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
@@ -113,7 +115,17 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
-app.MapHangfireDashboard("/hangfire");
+
+var hangfireUsername = app.Configuration["Hangfire:DashboardUsername"] ?? "admin";
+var hangfirePassword = app.Configuration["Hangfire:DashboardPassword"]
+    ?? (app.Environment.IsDevelopment()
+        ? "admin"
+        : throw new InvalidOperationException("Hangfire:DashboardPassword doit être configuré en dehors de Development."));
+
+app.MapHangfireDashboard("/hangfire", new DashboardOptions
+{
+    Authorization = new[] { new HangfireDashboardAuthorizationFilter(hangfireUsername, hangfirePassword) }
+});
 app.MapGet("/health", () => Results.Ok(new { status = "healthy" })).AllowAnonymous();
 
 using (var scope = app.Services.CreateScope())
