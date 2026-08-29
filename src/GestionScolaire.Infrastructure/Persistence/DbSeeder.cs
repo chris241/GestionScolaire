@@ -22,6 +22,30 @@ public static class DbSeeder
         };
         context.Subjects.AddRange(subjects);
 
+        var academicYear = new AcademicYear
+        {
+            Name = "2025-2026",
+            StartDate = new DateTime(2025, 9, 1, 0, 0, 0, DateTimeKind.Utc),
+            EndDate = new DateTime(2026, 6, 30, 0, 0, 0, DateTimeKind.Utc),
+            IsCurrent = true
+        };
+        context.AcademicYears.Add(academicYear);
+
+        var academicTerms = new[]
+        {
+            new AcademicTerm { Name = "Trimestre 1", Order = 1, AcademicYear = academicYear, StartDate = new DateTime(2025, 9, 1, 0, 0, 0, DateTimeKind.Utc), EndDate = new DateTime(2025, 12, 19, 0, 0, 0, DateTimeKind.Utc) },
+            new AcademicTerm { Name = "Trimestre 2", Order = 2, AcademicYear = academicYear, StartDate = new DateTime(2026, 1, 5, 0, 0, 0, DateTimeKind.Utc), EndDate = new DateTime(2026, 3, 27, 0, 0, 0, DateTimeKind.Utc) },
+            new AcademicTerm { Name = "Trimestre 3", Order = 3, AcademicYear = academicYear, StartDate = new DateTime(2026, 4, 6, 0, 0, 0, DateTimeKind.Utc), EndDate = new DateTime(2026, 6, 30, 0, 0, 0, DateTimeKind.Utc) },
+        };
+        context.AcademicTerms.AddRange(academicTerms);
+
+        context.EducationSettings.Add(new EducationSettings
+        {
+            SchoolName = "Établissement Scolaire",
+            Currency = "MGA",
+            DefaultMaxScore = 20
+        });
+
         var director = new User
         {
             Email = "directeur@ecole.mg",
@@ -48,8 +72,8 @@ public static class DbSeeder
 
         var classes = new[]
         {
-            new SchoolClass { Name = "6ème A", Level = "6ème", AcademicYear = "2025-2026", Capacity = 35, HomeroomTeacher = teachers[0] },
-            new SchoolClass { Name = "5ème B", Level = "5ème", AcademicYear = "2025-2026", Capacity = 35, HomeroomTeacher = teachers[1] },
+            new SchoolClass { Name = "6ème A", Level = "6ème", AcademicYear = academicYear, Capacity = 35, HomeroomTeacher = teachers[0] },
+            new SchoolClass { Name = "5ème B", Level = "5ème", AcademicYear = academicYear, Capacity = 35, HomeroomTeacher = teachers[1] },
         };
         context.Classes.AddRange(classes);
 

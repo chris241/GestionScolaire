@@ -37,7 +37,7 @@ public class BulletinsController : ControllerBase
             return Forbid();
 
         var student = await _context.Students
-            .Include(s => s.Class)
+            .Include(s => s.Class).ThenInclude(c => c.AcademicYear)
             .FirstOrDefaultAsync(s => s.Id == studentId);
 
         if (student is null) return NotFound(new { message = "Élève introuvable." });
@@ -72,7 +72,7 @@ public class BulletinsController : ControllerBase
             StudentFullName = student.FullName,
             EnrollmentNumber = student.EnrollmentNumber,
             ClassName = student.Class.Name,
-            AcademicYear = student.Class.AcademicYear,
+            AcademicYear = student.Class.AcademicYear.Name,
             Term = term,
             GeneralAverage = studentGeneral.GeneralAverage,
             ClassRank = rank,

@@ -14,6 +14,9 @@ public interface IApplicationDbContext
     DbSet<Grade> Grades { get; }
     DbSet<Attendance> Attendances { get; }
     DbSet<Payment> Payments { get; }
+    DbSet<AcademicYear> AcademicYears { get; }
+    DbSet<AcademicTerm> AcademicTerms { get; }
+    DbSet<EducationSettings> EducationSettings { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

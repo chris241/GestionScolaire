@@ -12,7 +12,6 @@ public class SchoolClassConfiguration : IEntityTypeConfiguration<SchoolClass>
         builder.HasKey(c => c.Id);
         builder.Property(c => c.Name).IsRequired().HasMaxLength(100);
         builder.Property(c => c.Level).IsRequired().HasMaxLength(50);
-        builder.Property(c => c.AcademicYear).IsRequired().HasMaxLength(20);
 
         builder.HasMany(c => c.Students)
             .WithOne(s => s.Class)

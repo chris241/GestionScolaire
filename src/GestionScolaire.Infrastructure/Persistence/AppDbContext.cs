@@ -19,6 +19,9 @@ public class AppDbContext : DbContext, IApplicationDbContext
     public DbSet<Grade> Grades => Set<Grade>();
     public DbSet<Attendance> Attendances => Set<Attendance>();
     public DbSet<Payment> Payments => Set<Payment>();
+    public DbSet<AcademicYear> AcademicYears => Set<AcademicYear>();
+    public DbSet<AcademicTerm> AcademicTerms => Set<AcademicTerm>();
+    public DbSet<EducationSettings> EducationSettings => Set<EducationSettings>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
