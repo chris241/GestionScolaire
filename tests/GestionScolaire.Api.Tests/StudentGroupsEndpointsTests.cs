@@ -4,6 +4,7 @@ using GestionScolaire.Api.Tests.Helpers;
 using GestionScolaire.Application.DTOs.AcademicYears;
 using GestionScolaire.Application.DTOs.StudentGroups;
 using GestionScolaire.Application.DTOs.Students;
+using GestionScolaire.Application.DTOs.Teachers;
 using Xunit;
 
 namespace GestionScolaire.Api.Tests;
@@ -41,7 +42,7 @@ public class StudentGroupsEndpointsTests
         var studentIds = students!.Take(2).Select(s => s.Id).ToList();
 
         var createResponse = await client.PostAsJsonAsync("/api/studentgroups", new CreateStudentGroupRequest(
-            "Groupe Test", "Niveau", 10, currentYear.Id, null));
+            "Groupe Test", "Niveau", 10, currentYear.Id, null, null));
         createResponse.EnsureSuccessStatusCode();
         var created = await createResponse.Content.ReadFromJsonAsync<StudentGroupDto>();
 
@@ -69,7 +70,7 @@ public class StudentGroupsEndpointsTests
         var studentId = students!.First().Id;
 
         var createResponse = await client.PostAsJsonAsync("/api/studentgroups", new CreateStudentGroupRequest(
-            "Groupe Idempotent", "Niveau", null, currentYear.Id, null));
+            "Groupe Idempotent", "Niveau", null, currentYear.Id, null, null));
         var created = await createResponse.Content.ReadFromJsonAsync<StudentGroupDto>();
 
         await client.PostAsJsonAsync($"/api/studentgroups/{created!.Id}/members", new AddGroupMembersRequest(new List<Guid> { studentId }));
@@ -88,7 +89,49 @@ public class StudentGroupsEndpointsTests
         var years = await client.GetFromJsonAsync<List<AcademicYearDto>>("/api/academicyears");
 
         var response = await client.PostAsJsonAsync("/api/studentgroups", new CreateStudentGroupRequest(
-            "Interdit", "Niveau", null, years!.First().Id, null));
+            "Interdit", "Niveau", null, years!.First().Id, null, null));
+
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Director_CanAssignAndClearResponsibleTeacher()
+    {
+        var client = await _factory.CreateClient().AsUserAsync("directeur@ecole.mg");
+
+        var years = await client.GetFromJsonAsync<List<AcademicYearDto>>("/api/academicyears");
+        var currentYear = years!.Single(y => y.IsCurrent);
+        var teachers = await client.GetFromJsonAsync<List<TeacherDto>>("/api/teachers");
+        var teacher = teachers!.First();
+
+        var createResponse = await client.PostAsJsonAsync("/api/studentgroups", new CreateStudentGroupRequest(
+            "Groupe Enseignant", "Niveau", null, currentYear.Id, null, teacher.Id));
+        createResponse.EnsureSuccessStatusCode();
+        var created = await createResponse.Content.ReadFromJsonAsync<StudentGroupDto>();
+        Assert.Equal(teacher.Id, created!.TeacherId);
+        Assert.Equal(teacher.FullName, created.TeacherName);
+
+        var updateResponse = await client.PutAsJsonAsync($"/api/studentgroups/{created.Id}", new UpdateStudentGroupRequest(
+            created.Name, created.GroupType, created.MaxSize, created.ClassId, null));
+        updateResponse.EnsureSuccessStatusCode();
+        var updated = await updateResponse.Content.ReadFromJsonAsync<StudentGroupDto>();
+        Assert.Null(updated!.TeacherId);
+        Assert.Null(updated.TeacherName);
+    }
+
+    [Fact]
+    public async Task Teacher_CannotUpdateGroup()
+    {
+        var director = await _factory.CreateClient().AsUserAsync("directeur@ecole.mg");
+        var years = await director.GetFromJsonAsync<List<AcademicYearDto>>("/api/academicyears");
+        var currentYear = years!.Single(y => y.IsCurrent);
+        var createResponse = await director.PostAsJsonAsync("/api/studentgroups", new CreateStudentGroupRequest(
+            "Groupe Protégé", "Niveau", null, currentYear.Id, null, null));
+        var created = await createResponse.Content.ReadFromJsonAsync<StudentGroupDto>();
+
+        var teacherClient = await _factory.CreateClient().AsUserAsync("prof.math@ecole.mg");
+        var response = await teacherClient.PutAsJsonAsync($"/api/studentgroups/{created!.Id}", new UpdateStudentGroupRequest(
+            "Interdit", "Niveau", null, null, null));
 
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
     }
