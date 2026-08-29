@@ -28,6 +28,12 @@ public class AppDbContext : DbContext, IApplicationDbContext
     public DbSet<StudentGroupMember> StudentGroupMembers => Set<StudentGroupMember>();
     public DbSet<StudentLog> StudentLogs => Set<StudentLog>();
     public DbSet<StudentApplicant> StudentApplicants => Set<StudentApplicant>();
+    public DbSet<AcademicProgram> AcademicPrograms => Set<AcademicProgram>();
+    public DbSet<Room> Rooms => Set<Room>();
+    public DbSet<Course> Courses => Set<Course>();
+    public DbSet<Topic> Topics => Set<Topic>();
+    public DbSet<CourseSchedule> CourseSchedules => Set<CourseSchedule>();
+    public DbSet<ProgramEnrollment> ProgramEnrollments => Set<ProgramEnrollment>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

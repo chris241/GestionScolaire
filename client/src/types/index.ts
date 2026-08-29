@@ -174,3 +174,76 @@ export interface StudentApplicant {
   decisionNotes: string | null;
   convertedStudentId: string | null;
 }
+
+export interface Teacher {
+  id: string;
+  fullName: string;
+  specialty: string;
+}
+
+export interface Program {
+  id: string;
+  name: string;
+  code: string;
+  description: string | null;
+  isActive: boolean;
+  classCount: number;
+  courseCount: number;
+}
+
+export interface Room {
+  id: string;
+  name: string;
+  capacity: number;
+  building: string | null;
+}
+
+export interface Topic {
+  id: string;
+  name: string;
+  description: string | null;
+  order: number;
+}
+
+export interface Course {
+  id: string;
+  name: string;
+  code: string | null;
+  description: string | null;
+  subjectId: string;
+  subjectName: string;
+  programId: string;
+  programName: string;
+  topics: Topic[];
+}
+
+export interface CourseSchedule {
+  id: string;
+  courseId: string;
+  courseName: string;
+  roomId: string;
+  roomName: string;
+  teacherId: string;
+  teacherName: string;
+  classId: string | null;
+  className: string | null;
+  academicTermId: string;
+  academicTermName: string;
+  dayOfWeek: number;
+  startTime: string;
+  endTime: string;
+}
+
+export type EnrollmentStatus = 'Active' | 'Completed' | 'Withdrawn';
+
+export interface ProgramEnrollment {
+  id: string;
+  studentId: string;
+  studentFullName: string;
+  programId: string;
+  programName: string;
+  academicYearId: string;
+  academicYearName: string;
+  enrollmentDate: string;
+  status: EnrollmentStatus;
+}
