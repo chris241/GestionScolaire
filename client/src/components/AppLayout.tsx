@@ -11,19 +11,19 @@ const NAV_ITEMS: {
   end: boolean;
   hideFor: string[];
 }[] = [
-  { to: '/', label: 'Tableau de bord', roleLabels: {}, icon: LayoutDashboard, end: true, hideFor: ['Parent', 'Teacher'] },
-  { to: '/eleves', label: 'Élèves', roleLabels: { Parent: 'Mes enfants', Teacher: 'Mes élèves' }, icon: GraduationCap, end: false, hideFor: [] },
+  { to: '/', label: 'Tableau de bord', roleLabels: {}, icon: LayoutDashboard, end: true, hideFor: ['Parent', 'Teacher', 'Student'] },
+  { to: '/eleves', label: 'Élèves', roleLabels: { Parent: 'Mes enfants', Teacher: 'Mes élèves' }, icon: GraduationCap, end: false, hideFor: ['Student'] },
   { to: '/notes', label: 'Notes', roleLabels: {}, icon: NotebookPen, end: false, hideFor: [] },
-  { to: '/resultats', label: 'Résultats finaux', roleLabels: {}, icon: Trophy, end: false, hideFor: ['Parent'] },
+  { to: '/resultats', label: 'Résultats finaux', roleLabels: {}, icon: Trophy, end: false, hideFor: ['Parent', 'Student'] },
   { to: '/presences', label: 'Présences', roleLabels: {}, icon: ClipboardCheck, end: false, hideFor: [] },
   { to: '/paiements', label: 'Paiements', roleLabels: {}, icon: Wallet, end: false, hideFor: ['Teacher'] },
-  { to: '/frais', label: 'Frais', roleLabels: {}, icon: Receipt, end: false, hideFor: ['Teacher', 'Parent'] },
-  { to: '/admissions', label: 'Admissions', roleLabels: {}, icon: UserPlus, end: false, hideFor: ['Teacher', 'Parent'] },
-  { to: '/groupes', label: 'Groupes & catégories', roleLabels: {}, icon: Users, end: false, hideFor: ['Teacher', 'Parent'] },
-  { to: '/programmes', label: 'Programmes', roleLabels: {}, icon: BookOpen, end: false, hideFor: ['Teacher', 'Parent'] },
-  { to: '/cours', label: 'Cours', roleLabels: {}, icon: BookOpen, end: false, hideFor: ['Parent'] },
+  { to: '/frais', label: 'Frais', roleLabels: {}, icon: Receipt, end: false, hideFor: ['Teacher', 'Parent', 'Student'] },
+  { to: '/admissions', label: 'Admissions', roleLabels: {}, icon: UserPlus, end: false, hideFor: ['Teacher', 'Parent', 'Student'] },
+  { to: '/groupes', label: 'Groupes & catégories', roleLabels: {}, icon: Users, end: false, hideFor: ['Teacher', 'Parent', 'Student'] },
+  { to: '/programmes', label: 'Programmes', roleLabels: {}, icon: BookOpen, end: false, hideFor: ['Teacher', 'Parent', 'Student'] },
+  { to: '/cours', label: 'Cours', roleLabels: {}, icon: BookOpen, end: false, hideFor: ['Parent', 'Student'] },
   { to: '/emploi-du-temps', label: "Emploi du temps", roleLabels: {}, icon: CalendarClock, end: false, hideFor: [] },
-  { to: '/parametres', label: 'Paramètres', roleLabels: {}, icon: Settings, end: false, hideFor: ['Teacher', 'Parent'] },
+  { to: '/parametres', label: 'Paramètres', roleLabels: {}, icon: Settings, end: false, hideFor: ['Teacher', 'Parent', 'Student'] },
 ];
 
 export function AppLayout({ children }: { children: ReactNode }) {

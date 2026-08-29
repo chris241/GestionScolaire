@@ -16,7 +16,8 @@ function formatDate(date: string | null) {
   return new Date(date).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' });
 }
 
-async function loadPaymentsForParent(): Promise<Payment[]> {
+// Un Parent voit les paiements de tous ses enfants ; un Élève ne voit que les siens (un seul "enfant" : lui-même).
+async function loadPaymentsForSelfView(): Promise<Payment[]> {
   const children = await fetchStudents();
   const perChild = await Promise.all(children.map((c) => fetchPaymentsByStudent(c.id)));
   return perChild.flat().sort((a, b) => new Date(b.dueDate).getTime() - new Date(a.dueDate).getTime());
@@ -24,7 +25,7 @@ async function loadPaymentsForParent(): Promise<Payment[]> {
 
 export function Payments() {
   const { user } = useAuth();
-  const isParent = user?.role === 'Parent';
+  const isSelfView = user?.role === 'Parent' || user?.role === 'Student';
   const isDirector = user?.role === 'Director';
 
   const [payments, setPayments] = useState<Payment[]>([]);
@@ -49,7 +50,7 @@ export function Payments() {
 
     let cancelled = false;
 
-    const load = isParent ? loadPaymentsForParent() : fetchPayments();
+    const load = isSelfView ? loadPaymentsForSelfView() : fetchPayments();
 
     load
       .then((data) => !cancelled && setPayments(data))
@@ -63,7 +64,7 @@ export function Payments() {
     return () => {
       cancelled = true;
     };
-  }, [isParent, isDirector, user?.role]);
+  }, [isSelfView, isDirector, user?.role]);
 
   useEffect(() => {
     if (!isDirector || !form.studentId) {
