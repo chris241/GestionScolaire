@@ -7,6 +7,7 @@ import { Dashboard } from './pages/Dashboard';
 import { Students } from './pages/Students';
 import { Payments } from './pages/Payments';
 import { Grades } from './pages/Grades';
+import { Settings } from './pages/Settings';
 import { useAuth } from './lib/AuthContext';
 
 // Le tableau de bord est réservé au Directeur (les endpoints stats/paiements globaux lui sont restreints côté API).
@@ -34,6 +35,7 @@ function App() {
                     <Route path="/eleves" element={<Students />} />
                     <Route path="/notes" element={<Grades />} />
                     <Route path="/paiements" element={<Payments />} />
+                    <Route path="/parametres" element={<Settings />} />
                   </Routes>
                 </AppLayout>
               </ProtectedRoute>

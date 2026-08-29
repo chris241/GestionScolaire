@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, GraduationCap, NotebookPen, Wallet, LogOut } from 'lucide-react';
+import { LayoutDashboard, GraduationCap, NotebookPen, Wallet, Settings, LogOut } from 'lucide-react';
 import { useAuth } from '../lib/AuthContext';
 
 const NAV_ITEMS: {
@@ -15,6 +15,7 @@ const NAV_ITEMS: {
   { to: '/eleves', label: 'Élèves', roleLabels: { Parent: 'Mes enfants', Teacher: 'Mes élèves' }, icon: GraduationCap, end: false, hideFor: [] },
   { to: '/notes', label: 'Notes', roleLabels: {}, icon: NotebookPen, end: false, hideFor: [] },
   { to: '/paiements', label: 'Paiements', roleLabels: {}, icon: Wallet, end: false, hideFor: ['Teacher'] },
+  { to: '/parametres', label: 'Paramètres', roleLabels: {}, icon: Settings, end: false, hideFor: ['Teacher', 'Parent'] },
 ];
 
 export function AppLayout({ children }: { children: ReactNode }) {

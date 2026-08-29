@@ -83,3 +83,29 @@ export interface UserProfile {
   lastName: string;
   role: 'Director' | 'Teacher' | 'Parent';
 }
+
+export interface AcademicYear {
+  id: string;
+  name: string;
+  startDate: string;
+  endDate: string;
+  isCurrent: boolean;
+}
+
+export interface AcademicTerm {
+  id: string;
+  name: string;
+  order: number;
+  startDate: string;
+  endDate: string;
+  academicYearId: string;
+  academicYearName: string;
+}
+
+export interface EducationSettings {
+  id: string;
+  schoolName: string;
+  address: string | null;
+  currency: string;
+  defaultMaxScore: number;
+}
