@@ -283,6 +283,28 @@ public static class DbSeeder
             });
         }
 
+        context.StudentLeaveApplications.AddRange(
+            new StudentLeaveApplication
+            {
+                Student = students[2],
+                StartDate = DateTime.UtcNow.Date.AddDays(3),
+                EndDate = DateTime.UtcNow.Date.AddDays(5),
+                Reason = "Consultation médicale programmée.",
+                Status = LeaveApplicationStatus.Pending,
+                RequestedByUserId = parentUsers[2].Id
+            },
+            new StudentLeaveApplication
+            {
+                Student = students[4],
+                StartDate = DateTime.UtcNow.Date.AddDays(-10),
+                EndDate = DateTime.UtcNow.Date.AddDays(-8),
+                Reason = "Voyage familial.",
+                Status = LeaveApplicationStatus.Approved,
+                RequestedByUserId = parentUsers[4].Id,
+                DecisionDate = DateTime.UtcNow.AddDays(-12),
+                DecisionNotes = "Autorisé."
+            });
+
         context.StudentApplicants.AddRange(
             new StudentApplicant
             {
