@@ -40,6 +40,9 @@ public interface IApplicationDbContext
     DbSet<FeeStructureItem> FeeStructureItems { get; }
     DbSet<FeeSchedule> FeeSchedules { get; }
     DbSet<Invoice> Invoices { get; }
+    DbSet<Guardian> Guardians { get; }
+    DbSet<StudentGuardian> StudentGuardians { get; }
+    DbSet<StudentSibling> StudentSiblings { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }
