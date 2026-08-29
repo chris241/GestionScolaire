@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react';
-import { fetchFinalGradesByClass } from '../api/finalGrades';
+import { fetchFinalGradesByClass, fetchCourseWiseAssessment } from '../api/finalGrades';
 import { fetchStudents } from '../api/students';
 import { fetchAcademicYears } from '../api/academicYears';
 import { fetchAcademicTerms } from '../api/academicTerms';
@@ -7,9 +7,10 @@ import { fetchAssessmentGroups, createAssessmentGroup, deleteAssessmentGroup } f
 import { fetchGradingScales, createGradingScale, addGradingScaleInterval, deleteGradingScale } from '../api/gradingScales';
 import { fetchCourses } from '../api/courses';
 import { fetchAssessmentPlans, createAssessmentPlan, updateAssessmentPlanStatus } from '../api/assessmentPlans';
+import { downloadClassBulletins } from '../api/grades';
 import { StatusBadge } from '../components/StatusBadge';
 import { useAuth } from '../lib/AuthContext';
-import type { AcademicTerm, AssessmentGroup, AssessmentPlan, AssessmentPlanStatus, Course, FinalGrade, GradingScale } from '../types';
+import type { AcademicTerm, AssessmentGroup, AssessmentPlan, AssessmentPlanStatus, Course, CourseWiseAssessment, FinalGrade, GradingScale } from '../types';
 
 const inputClass =
   'rounded-xl border border-border bg-bg px-3.5 py-2.5 text-sm text-slate outline-none focus:border-primary focus:ring-2 focus:ring-primary/20';
@@ -23,6 +24,8 @@ export function FinalGrades() {
   const [terms, setTerms] = useState<AcademicTerm[]>([]);
   const [selectedTermName, setSelectedTermName] = useState('');
   const [finalGrades, setFinalGrades] = useState<FinalGrade[]>([]);
+  const [courseWiseReport, setCourseWiseReport] = useState<CourseWiseAssessment[]>([]);
+  const [downloadingBulletins, setDownloadingBulletins] = useState(false);
   const [groups, setGroups] = useState<AssessmentGroup[]>([]);
   const [scales, setScales] = useState<GradingScale[]>([]);
   const [courses, setCourses] = useState<Course[]>([]);
@@ -72,7 +75,23 @@ export function FinalGrades() {
     fetchFinalGradesByClass(selectedClassId, selectedTermName)
       .then(setFinalGrades)
       .catch(() => setError('Impossible de charger les résultats finaux.'));
+    fetchCourseWiseAssessment(selectedClassId, selectedTermName)
+      .then(setCourseWiseReport)
+      .catch(() => setError("Impossible de charger le rapport d'évaluation par cours."));
   }, [selectedClassId, selectedTermName]);
+
+  async function handleDownloadClassBulletins() {
+    if (!selectedClassId || !selectedTermName) return;
+    setDownloadingBulletins(true);
+    setError(null);
+    try {
+      await downloadClassBulletins(selectedClassId, selectedTermName);
+    } catch {
+      setError('Impossible de générer les bulletins de la classe.');
+    } finally {
+      setDownloadingBulletins(false);
+    }
+  }
 
   useEffect(() => {
     if (!isDirector || !selectedClassId) return;
@@ -221,6 +240,14 @@ export function FinalGrades() {
             <option key={t.id} value={t.name}>{t.name}</option>
           ))}
         </select>
+        <button
+          type="button"
+          onClick={handleDownloadClassBulletins}
+          disabled={downloadingBulletins || !selectedClassId}
+          className="rounded-xl border border-primary px-4 py-2.5 text-sm font-medium text-primary transition-colors hover:bg-primary-soft disabled:opacity-60"
+        >
+          {downloadingBulletins ? 'Génération...' : 'Tous les bulletins (ZIP)'}
+        </button>
       </div>
 
       <div className="mt-6 overflow-x-auto rounded-2xl border border-border bg-surface shadow-sm">
@@ -251,6 +278,37 @@ export function FinalGrades() {
                     </span>
                   )}
                 </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <div className="mt-6 overflow-x-auto rounded-2xl border border-border bg-surface shadow-sm">
+        <div className="border-b border-border px-6 py-3">
+          <h2 className="text-sm font-semibold text-slate">Rapport d'évaluation par cours</h2>
+        </div>
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b border-border text-left text-xs font-medium uppercase tracking-wide text-slate-soft">
+              <th className="px-6 py-3">Cours</th>
+              <th className="px-6 py-3">Moyenne de classe</th>
+              <th className="px-6 py-3">Min</th>
+              <th className="px-6 py-3">Max</th>
+              <th className="px-6 py-3">Élèves évalués</th>
+            </tr>
+          </thead>
+          <tbody>
+            {courseWiseReport.length === 0 && (
+              <tr><td colSpan={5} className="px-6 py-6 text-center text-slate-soft">Aucune note pour cette sélection.</td></tr>
+            )}
+            {courseWiseReport.map((c) => (
+              <tr key={c.courseName} className="border-b border-border last:border-0">
+                <td className="px-6 py-3 font-medium text-slate">{c.courseName}</td>
+                <td className="px-6 py-3 text-slate">{c.classAverage.toFixed(2)}/20</td>
+                <td className="px-6 py-3 text-slate-soft">{c.minAverage.toFixed(2)}/20</td>
+                <td className="px-6 py-3 text-slate-soft">{c.maxAverage.toFixed(2)}/20</td>
+                <td className="px-6 py-3 text-slate-soft">{c.studentsEvaluated}</td>
               </tr>
             ))}
           </tbody>
