@@ -180,6 +180,8 @@ export interface Teacher {
   id: string;
   fullName: string;
   specialty: string;
+  email: string;
+  hireDate: string;
 }
 
 export interface Program {

@@ -16,6 +16,7 @@ import { Schedule } from './pages/Schedule';
 import { Attendance } from './pages/Attendance';
 import { FinalGrades } from './pages/FinalGrades';
 import { Fees } from './pages/Fees';
+import { Teachers } from './pages/Teachers';
 import { useAuth } from './lib/AuthContext';
 
 // Le tableau de bord est réservé au Directeur (les endpoints stats/paiements globaux lui sont restreints côté API).
@@ -52,6 +53,7 @@ function App() {
                     <Route path="/presences" element={<Attendance />} />
                     <Route path="/resultats" element={<FinalGrades />} />
                     <Route path="/frais" element={<Fees />} />
+                    <Route path="/enseignants" element={<Teachers />} />
                   </Routes>
                 </AppLayout>
               </ProtectedRoute>
