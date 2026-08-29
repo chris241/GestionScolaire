@@ -27,6 +27,7 @@ public class AppDbContext : DbContext, IApplicationDbContext
     public DbSet<StudentGroup> StudentGroups => Set<StudentGroup>();
     public DbSet<StudentGroupMember> StudentGroupMembers => Set<StudentGroupMember>();
     public DbSet<StudentLog> StudentLogs => Set<StudentLog>();
+    public DbSet<StudentApplicant> StudentApplicants => Set<StudentApplicant>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

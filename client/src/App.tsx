@@ -9,6 +9,7 @@ import { Payments } from './pages/Payments';
 import { Grades } from './pages/Grades';
 import { Settings } from './pages/Settings';
 import { StudentGroups } from './pages/StudentGroups';
+import { Admissions } from './pages/Admissions';
 import { useAuth } from './lib/AuthContext';
 
 // Le tableau de bord est réservé au Directeur (les endpoints stats/paiements globaux lui sont restreints côté API).
@@ -38,6 +39,7 @@ function App() {
                     <Route path="/paiements" element={<Payments />} />
                     <Route path="/parametres" element={<Settings />} />
                     <Route path="/groupes" element={<StudentGroups />} />
+                    <Route path="/admissions" element={<Admissions />} />
                   </Routes>
                 </AppLayout>
               </ProtectedRoute>

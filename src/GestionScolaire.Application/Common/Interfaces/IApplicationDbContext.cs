@@ -22,6 +22,7 @@ public interface IApplicationDbContext
     DbSet<StudentGroup> StudentGroups { get; }
     DbSet<StudentGroupMember> StudentGroupMembers { get; }
     DbSet<StudentLog> StudentLogs { get; }
+    DbSet<StudentApplicant> StudentApplicants { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

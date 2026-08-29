@@ -151,3 +151,26 @@ export interface StudentLog {
   logType: string;
   description: string;
 }
+
+export type AdmissionStatus = 'Submitted' | 'UnderReview' | 'Accepted' | 'Rejected' | 'Enrolled';
+
+export interface StudentApplicant {
+  id: string;
+  firstName: string;
+  lastName: string;
+  dateOfBirth: string;
+  gender: 'Masculin' | 'Feminin';
+  email: string | null;
+  phone: string | null;
+  guardianName: string | null;
+  guardianEmail: string | null;
+  guardianPhone: string | null;
+  levelAppliedFor: string;
+  academicYearId: string;
+  academicYearName: string;
+  appliedDate: string;
+  status: AdmissionStatus;
+  decisionDate: string | null;
+  decisionNotes: string | null;
+  convertedStudentId: string | null;
+}
