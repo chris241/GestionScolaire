@@ -1,4 +1,5 @@
 using GestionScolaire.Domain.Common;
+using GestionScolaire.Domain.Enums;
 
 namespace GestionScolaire.Domain.Entities;
 
@@ -7,6 +8,7 @@ public class AssessmentPlan : BaseEntity
     public string Name { get; set; } = string.Empty;
     public decimal MaxScore { get; set; } = 20;
     public DateTime PlannedDate { get; set; }
+    public AssessmentPlanStatus Status { get; set; } = AssessmentPlanStatus.Draft;
 
     public Guid CourseId { get; set; }
     public Course Course { get; set; } = null!;
