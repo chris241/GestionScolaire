@@ -17,8 +17,17 @@ export async function createStudentGroup(request: {
   maxSize: number | null;
   academicYearId: string;
   classId: string | null;
+  teacherId: string | null;
 }): Promise<StudentGroup> {
   const { data } = await apiClient.post<StudentGroup>('/studentgroups', request);
+  return data;
+}
+
+export async function updateStudentGroup(
+  id: string,
+  request: { name: string; groupType: string; maxSize: number | null; classId: string | null; teacherId: string | null }
+): Promise<StudentGroup> {
+  const { data } = await apiClient.put<StudentGroup>(`/studentgroups/${id}`, request);
   return data;
 }
 

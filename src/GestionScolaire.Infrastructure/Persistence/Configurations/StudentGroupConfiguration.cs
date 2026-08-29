@@ -23,6 +23,11 @@ public class StudentGroupConfiguration : IEntityTypeConfiguration<StudentGroup>
             .WithMany()
             .HasForeignKey(g => g.ClassId)
             .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasOne(g => g.Teacher)
+            .WithMany()
+            .HasForeignKey(g => g.TeacherId)
+            .OnDelete(DeleteBehavior.Restrict);
     }
 }
 

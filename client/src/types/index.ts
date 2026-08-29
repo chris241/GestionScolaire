@@ -136,6 +136,8 @@ export interface StudentGroup {
   academicYearName: string;
   classId: string | null;
   className: string | null;
+  teacherId: string | null;
+  teacherName: string | null;
   memberCount: number;
 }
 
@@ -148,6 +150,14 @@ export interface StudentGroupMember {
 export interface StudentLog {
   id: string;
   studentId: string;
+  logDate: string;
+  logType: string;
+  description: string;
+}
+
+export interface TeacherLog {
+  id: string;
+  teacherId: string;
   logDate: string;
   logType: string;
   description: string;
@@ -355,6 +365,14 @@ export interface AssessmentPlan {
 }
 
 export type AssessmentPlanStatus = 'Draft' | 'Scheduled' | 'Completed';
+
+export interface CourseWiseAssessment {
+  courseName: string;
+  classAverage: number;
+  minAverage: number;
+  maxAverage: number;
+  studentsEvaluated: number;
+}
 
 export interface FinalGrade {
   studentId: string;

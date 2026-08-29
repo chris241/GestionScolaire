@@ -25,12 +25,14 @@ public class StudentGroupsController : ControllerBase
         var groups = await _context.StudentGroups
             .Include(g => g.AcademicYear)
             .Include(g => g.Class)
+            .Include(g => g.Teacher).ThenInclude(t => t!.User)
             .Include(g => g.Members)
             .OrderBy(g => g.Name)
             .Select(g => new StudentGroupDto(
                 g.Id, g.Name, g.GroupType, g.MaxSize,
                 g.AcademicYearId, g.AcademicYear.Name,
                 g.ClassId, g.Class == null ? null : g.Class.Name,
+                g.TeacherId, g.Teacher == null ? null : g.Teacher.User.FirstName + " " + g.Teacher.User.LastName,
                 g.Members.Count))
             .ToListAsync();
 
@@ -63,19 +65,67 @@ public class StudentGroupsController : ControllerBase
             if (schoolClass is null) return NotFound(new { message = "Classe introuvable." });
         }
 
+        Teacher? teacher = null;
+        if (request.TeacherId.HasValue)
+        {
+            teacher = await _context.Teachers.Include(t => t.User).FirstOrDefaultAsync(t => t.Id == request.TeacherId.Value);
+            if (teacher is null) return NotFound(new { message = "Enseignant introuvable." });
+        }
+
         var group = new StudentGroup
         {
             Name = request.Name,
             GroupType = request.GroupType,
             MaxSize = request.MaxSize,
             AcademicYearId = request.AcademicYearId,
-            ClassId = request.ClassId
+            ClassId = request.ClassId,
+            TeacherId = request.TeacherId
         };
 
         _context.StudentGroups.Add(group);
         await _context.SaveChangesAsync();
 
-        return Ok(new StudentGroupDto(group.Id, group.Name, group.GroupType, group.MaxSize, group.AcademicYearId, year.Name, group.ClassId, schoolClass?.Name, 0));
+        return Ok(new StudentGroupDto(group.Id, group.Name, group.GroupType, group.MaxSize, group.AcademicYearId, year.Name, group.ClassId, schoolClass?.Name, group.TeacherId, teacher?.User.FullName, 0));
+    }
+
+    [HttpPut("{id:guid}")]
+    [Authorize(Roles = "Director")]
+    public async Task<ActionResult<StudentGroupDto>> Update(Guid id, UpdateStudentGroupRequest request)
+    {
+        var group = await _context.StudentGroups
+            .Include(g => g.AcademicYear)
+            .Include(g => g.Class)
+            .Include(g => g.Members)
+            .FirstOrDefaultAsync(g => g.Id == id);
+        if (group is null) return NotFound(new { message = "Groupe introuvable." });
+
+        SchoolClass? schoolClass = group.Class;
+        if (request.ClassId != group.ClassId)
+        {
+            schoolClass = null;
+            if (request.ClassId.HasValue)
+            {
+                schoolClass = await _context.Classes.FindAsync(request.ClassId.Value);
+                if (schoolClass is null) return NotFound(new { message = "Classe introuvable." });
+            }
+        }
+
+        Teacher? teacher = null;
+        if (request.TeacherId.HasValue)
+        {
+            teacher = await _context.Teachers.Include(t => t.User).FirstOrDefaultAsync(t => t.Id == request.TeacherId.Value);
+            if (teacher is null) return NotFound(new { message = "Enseignant introuvable." });
+        }
+
+        group.Name = request.Name;
+        group.GroupType = request.GroupType;
+        group.MaxSize = request.MaxSize;
+        group.ClassId = request.ClassId;
+        group.TeacherId = request.TeacherId;
+
+        await _context.SaveChangesAsync();
+
+        return Ok(new StudentGroupDto(group.Id, group.Name, group.GroupType, group.MaxSize, group.AcademicYearId, group.AcademicYear.Name, group.ClassId, schoolClass?.Name, group.TeacherId, teacher?.User.FullName, group.Members.Count));
     }
 
     [HttpDelete("{id:guid}")]

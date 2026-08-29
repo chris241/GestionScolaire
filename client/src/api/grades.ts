@@ -43,3 +43,19 @@ export async function downloadBulletin(studentId: string, term: string) {
   link.remove();
   window.URL.revokeObjectURL(url);
 }
+
+export async function downloadClassBulletins(classId: string, term: string) {
+  const response = await apiClient.get(`/bulletins/class/${classId}`, {
+    params: { term },
+    responseType: 'blob',
+  });
+
+  const url = window.URL.createObjectURL(response.data);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `bulletins_${classId}.zip`;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  window.URL.revokeObjectURL(url);
+}

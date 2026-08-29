@@ -12,3 +12,11 @@ public record FinalGradeDto(
     int ClassSize,
     List<StudentAverageDto> SubjectAverages
 );
+
+public record CourseWiseAssessmentDto(
+    string CourseName,
+    decimal ClassAverage,
+    decimal MinAverage,
+    decimal MaxAverage,
+    int StudentsEvaluated
+);

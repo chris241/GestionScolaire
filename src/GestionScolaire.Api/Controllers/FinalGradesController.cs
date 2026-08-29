@@ -57,6 +57,40 @@ public class FinalGradesController : ControllerBase
         return Ok(result);
     }
 
+    /// Rapport d'évaluation par cours : moyenne, min, max et nombre d'élèves évalués, pour chaque matière de la classe.
+    [HttpGet("class/{classId:guid}/by-course")]
+    [Authorize(Roles = "Director,Teacher")]
+    public async Task<ActionResult<List<CourseWiseAssessmentDto>>> GetByCourse(Guid classId, [FromQuery] string term)
+    {
+        if (!await CanAccessClassAsync(classId)) return Forbid();
+
+        var students = await _context.Students
+            .Where(s => s.ClassId == classId && s.IsActive)
+            .ToListAsync();
+
+        var grades = await _context.Grades
+            .Include(g => g.Subject)
+            .Where(g => g.ClassId == classId && g.Term == term)
+            .ToListAsync();
+
+        var studentSubjectAverages = students
+            .SelectMany(s => GradeAverageCalculator.CalculateGeneralAverage(s.Id, s.FullName, grades.Where(g => g.StudentId == s.Id)).SubjectAverages)
+            .ToList();
+
+        var report = studentSubjectAverages
+            .GroupBy(sa => sa.SubjectName)
+            .Select(g => new CourseWiseAssessmentDto(
+                g.Key,
+                Math.Round(g.Average(x => x.Average), 2),
+                g.Min(x => x.Average),
+                g.Max(x => x.Average),
+                g.Count()))
+            .OrderBy(x => x.CourseName)
+            .ToList();
+
+        return Ok(report);
+    }
+
     [HttpGet("student/{studentId:guid}")]
     public async Task<ActionResult<FinalGradeDto>> GetByStudent(Guid studentId, [FromQuery] string term)
     {

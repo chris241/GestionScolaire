@@ -3,6 +3,7 @@ import {
   fetchStudentGroups,
   fetchStudentGroupMembers,
   createStudentGroup,
+  updateStudentGroup,
   addStudentGroupMembers,
   removeStudentGroupMember,
   deleteStudentGroup,
@@ -10,7 +11,8 @@ import {
 import { fetchStudentCategories, createStudentCategory, deleteStudentCategory } from '../api/studentCategories';
 import { fetchAcademicYears } from '../api/academicYears';
 import { fetchStudents } from '../api/students';
-import type { StudentGroup, StudentGroupMember, StudentCategory, AcademicYear, Student } from '../types';
+import { fetchTeachers } from '../api/teachers';
+import type { StudentGroup, StudentGroupMember, StudentCategory, AcademicYear, Student, Teacher } from '../types';
 
 const inputClass =
   'rounded-xl border border-border bg-bg px-3.5 py-2.5 text-sm text-slate outline-none focus:border-primary focus:ring-2 focus:ring-primary/20';
@@ -20,14 +22,16 @@ export function StudentGroups() {
   const [categories, setCategories] = useState<StudentCategory[]>([]);
   const [years, setYears] = useState<AcademicYear[]>([]);
   const [students, setStudents] = useState<Student[]>([]);
+  const [teachers, setTeachers] = useState<Teacher[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
   const [members, setMembers] = useState<StudentGroupMember[]>([]);
   const [studentToAdd, setStudentToAdd] = useState('');
+  const [savingTeacher, setSavingTeacher] = useState(false);
 
-  const [groupForm, setGroupForm] = useState({ name: '', groupType: '', maxSize: '', classId: '' });
+  const [groupForm, setGroupForm] = useState({ name: '', groupType: '', maxSize: '', classId: '', teacherId: '' });
   const [categoryForm, setCategoryForm] = useState({ name: '', description: '' });
   const [savingGroup, setSavingGroup] = useState(false);
   const [savingCategory, setSavingCategory] = useState(false);
@@ -35,12 +39,13 @@ export function StudentGroups() {
   const classOptions = Array.from(new Map(students.map((s) => [s.classId, s.className])).entries());
 
   useEffect(() => {
-    Promise.all([fetchStudentGroups(), fetchStudentCategories(), fetchAcademicYears(), fetchStudents()])
-      .then(([groupsData, categoriesData, yearsData, studentsData]) => {
+    Promise.all([fetchStudentGroups(), fetchStudentCategories(), fetchAcademicYears(), fetchStudents(), fetchTeachers()])
+      .then(([groupsData, categoriesData, yearsData, studentsData, teachersData]) => {
         setGroups(groupsData);
         setCategories(categoriesData);
         setYears(yearsData);
         setStudents(studentsData);
+        setTeachers(teachersData);
       })
       .catch(() => setError('Impossible de charger les données.'))
       .finally(() => setLoading(false));
@@ -67,13 +72,34 @@ export function StudentGroups() {
         maxSize: groupForm.maxSize ? Number(groupForm.maxSize) : null,
         academicYearId: currentYear.id,
         classId: groupForm.classId || null,
+        teacherId: groupForm.teacherId || null,
       });
       setGroups((prev) => [...prev, created]);
-      setGroupForm({ name: '', groupType: '', maxSize: '', classId: '' });
+      setGroupForm({ name: '', groupType: '', maxSize: '', classId: '', teacherId: '' });
     } catch {
       setError('Impossible de créer le groupe.');
     } finally {
       setSavingGroup(false);
+    }
+  }
+
+  async function handleChangeTeacher(teacherId: string) {
+    if (!selectedGroup) return;
+    setSavingTeacher(true);
+    setError(null);
+    try {
+      const updated = await updateStudentGroup(selectedGroup.id, {
+        name: selectedGroup.name,
+        groupType: selectedGroup.groupType,
+        maxSize: selectedGroup.maxSize,
+        classId: selectedGroup.classId,
+        teacherId: teacherId || null,
+      });
+      setGroups((prev) => prev.map((g) => (g.id === updated.id ? updated : g)));
+    } catch {
+      setError("Impossible de mettre à jour l'enseignant responsable.");
+    } finally {
+      setSavingTeacher(false);
     }
   }
 
@@ -181,6 +207,7 @@ export function StudentGroups() {
                   <p className="text-xs text-slate-soft">
                     {group.groupType} · {group.memberCount} membre(s)
                     {group.className ? ` · ${group.className}` : ''}
+                    {group.teacherName ? ` · ${group.teacherName}` : ''}
                   </p>
                 </div>
                 <span
@@ -232,6 +259,16 @@ export function StudentGroups() {
                 <option key={id} value={id}>{name}</option>
               ))}
             </select>
+            <select
+              value={groupForm.teacherId}
+              onChange={(e) => setGroupForm({ ...groupForm, teacherId: e.target.value })}
+              className={inputClass}
+            >
+              <option value="">Aucun enseignant responsable</option>
+              {teachers.map((t) => (
+                <option key={t.id} value={t.id}>{t.fullName}</option>
+              ))}
+            </select>
             <button
               type="submit"
               disabled={savingGroup}
@@ -244,6 +281,20 @@ export function StudentGroups() {
           {selectedGroup && (
             <div className="mt-4 border-t border-border pt-4">
               <h3 className="text-sm font-semibold text-slate">Membres de « {selectedGroup.name} »</h3>
+              <div className="mt-3 flex items-center gap-2">
+                <label className="text-xs font-medium text-slate-soft">Enseignant responsable</label>
+                <select
+                  value={selectedGroup.teacherId ?? ''}
+                  onChange={(e) => handleChangeTeacher(e.target.value)}
+                  disabled={savingTeacher}
+                  className={`${inputClass} flex-1 py-2`}
+                >
+                  <option value="">Aucun</option>
+                  {teachers.map((t) => (
+                    <option key={t.id} value={t.id}>{t.fullName}</option>
+                  ))}
+                </select>
+              </div>
               <div className="mt-3 flex flex-col gap-2">
                 {members.length === 0 && <p className="text-sm text-slate-soft">Aucun membre.</p>}
                 {members.map((member) => (
