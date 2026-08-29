@@ -247,3 +247,29 @@ export interface ProgramEnrollment {
   enrollmentDate: string;
   status: EnrollmentStatus;
 }
+
+export type AttendanceStatus = 'Present' | 'Absent' | 'Retard' | 'Excuse';
+
+export interface AttendanceRecord {
+  id: string | null;
+  studentId: string;
+  studentFullName: string;
+  classId: string;
+  date: string;
+  status: AttendanceStatus | null;
+  comment: string | null;
+}
+
+export type LeaveApplicationStatus = 'Pending' | 'Approved' | 'Rejected';
+
+export interface LeaveApplication {
+  id: string;
+  studentId: string;
+  studentFullName: string;
+  startDate: string;
+  endDate: string;
+  reason: string;
+  status: LeaveApplicationStatus;
+  decisionDate: string | null;
+  decisionNotes: string | null;
+}

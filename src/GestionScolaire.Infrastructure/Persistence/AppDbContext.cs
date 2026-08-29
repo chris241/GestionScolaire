@@ -34,6 +34,7 @@ public class AppDbContext : DbContext, IApplicationDbContext
     public DbSet<Topic> Topics => Set<Topic>();
     public DbSet<CourseSchedule> CourseSchedules => Set<CourseSchedule>();
     public DbSet<ProgramEnrollment> ProgramEnrollments => Set<ProgramEnrollment>();
+    public DbSet<StudentLeaveApplication> StudentLeaveApplications => Set<StudentLeaveApplication>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
