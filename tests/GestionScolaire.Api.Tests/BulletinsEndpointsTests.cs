@@ -69,4 +69,46 @@ public class BulletinsEndpointsTests
 
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
     }
+
+    [Fact]
+    public async Task Teacher_CanDownloadZipOfAllBulletins_ForOwnClass()
+    {
+        var teacherClient = await _factory.CreateClient().AsUserAsync("prof.math@ecole.mg");
+        var ownClassId = (await teacherClient.GetFromJsonAsync<List<StudentDto>>("/api/students"))!.First().ClassId;
+
+        var response = await teacherClient.GetAsync($"/api/bulletins/class/{ownClassId}?term=Trimestre 1");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal("application/zip", response.Content.Headers.ContentType?.MediaType);
+
+        var bytes = await response.Content.ReadAsByteArrayAsync();
+        Assert.True(bytes.Length > 0);
+        // Un ZIP valide commence toujours par la signature PK\x03\x04.
+        Assert.Equal(0x50, bytes[0]);
+        Assert.Equal(0x4B, bytes[1]);
+    }
+
+    [Fact]
+    public async Task Teacher_CannotDownloadZipOfAllBulletins_ForOtherClass()
+    {
+        var mathTeacherClient = await _factory.CreateClient().AsUserAsync("prof.math@ecole.mg");
+        var frenchTeacherClient = await _factory.CreateClient().AsUserAsync("prof.francais@ecole.mg");
+
+        var otherClassId = (await frenchTeacherClient.GetFromJsonAsync<List<StudentDto>>("/api/students"))!.First().ClassId;
+
+        var response = await mathTeacherClient.GetAsync($"/api/bulletins/class/{otherClassId}?term=Trimestre 1");
+
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Parent_CannotDownloadZipOfAllBulletins()
+    {
+        var parentClient = await _factory.CreateClient().AsUserAsync("parent1@ecole.mg");
+        var classId = (await parentClient.GetFromJsonAsync<List<StudentDto>>("/api/students"))!.Single().ClassId;
+
+        var response = await parentClient.GetAsync($"/api/bulletins/class/{classId}?term=Trimestre 1");
+
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
 }
