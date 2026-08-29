@@ -1,0 +1,108 @@
+using GestionScolaire.Application.Common.Interfaces;
+using GestionScolaire.Application.DTOs.FinalGrades;
+using GestionScolaire.Application.Services;
+using GestionScolaire.Domain.Entities;
+using GestionScolaire.Domain.Enums;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+
+namespace GestionScolaire.Api.Controllers;
+
+[ApiController]
+[Route("api/[controller]")]
+[Authorize]
+public class FinalGradesController : ControllerBase
+{
+    private readonly IApplicationDbContext _context;
+    private readonly ICurrentUserService _currentUser;
+    private readonly IStudentAccessPolicy _accessPolicy;
+
+    public FinalGradesController(IApplicationDbContext context, ICurrentUserService currentUser, IStudentAccessPolicy accessPolicy)
+    {
+        _context = context;
+        _currentUser = currentUser;
+        _accessPolicy = accessPolicy;
+    }
+
+    [HttpGet("class/{classId:guid}")]
+    [Authorize(Roles = "Director,Teacher")]
+    public async Task<ActionResult<List<FinalGradeDto>>> GetByClass(Guid classId, [FromQuery] string term)
+    {
+        if (!await CanAccessClassAsync(classId)) return Forbid();
+
+        var students = await _context.Students
+            .Where(s => s.ClassId == classId && s.IsActive)
+            .OrderBy(s => s.LastName)
+            .ToListAsync();
+
+        var grades = await _context.Grades
+            .Include(g => g.Subject)
+            .Where(g => g.ClassId == classId && g.Term == term)
+            .ToListAsync();
+
+        var defaultScale = await _context.GradingScales.Include(s => s.Intervals).FirstOrDefaultAsync(s => s.IsDefault);
+
+        var averages = students
+            .Select(s => (Student: s, Result: GradeAverageCalculator.CalculateGeneralAverage(s.Id, s.FullName, grades.Where(g => g.StudentId == s.Id))))
+            .OrderByDescending(x => x.Result.GeneralAverage)
+            .ToList();
+
+        var result = averages.Select((x, index) => new FinalGradeDto(
+            x.Student.Id, x.Student.FullName, x.Result.GeneralAverage,
+            GradeAverageCalculator.GetMention(x.Result.GeneralAverage),
+            FindLetterGrade(defaultScale, x.Result.GeneralAverage),
+            index + 1, averages.Count, x.Result.SubjectAverages)).ToList();
+
+        return Ok(result);
+    }
+
+    [HttpGet("student/{studentId:guid}")]
+    public async Task<ActionResult<FinalGradeDto>> GetByStudent(Guid studentId, [FromQuery] string term)
+    {
+        if (!await HasAccessAsync(studentId)) return Forbid();
+
+        var student = await _context.Students.FindAsync(studentId);
+        if (student is null) return NotFound();
+
+        var classmates = await _context.Students.Where(s => s.ClassId == student.ClassId && s.IsActive).ToListAsync();
+
+        var grades = await _context.Grades
+            .Include(g => g.Subject)
+            .Where(g => g.ClassId == student.ClassId && g.Term == term)
+            .ToListAsync();
+
+        var defaultScale = await _context.GradingScales.Include(s => s.Intervals).FirstOrDefaultAsync(s => s.IsDefault);
+
+        var averages = classmates
+            .Select(s => (StudentId: s.Id, Average: GradeAverageCalculator.CalculateGeneralAverage(s.Id, s.FullName, grades.Where(g => g.StudentId == s.Id))))
+            .OrderByDescending(x => x.Average.GeneralAverage)
+            .ToList();
+
+        var rank = averages.FindIndex(x => x.StudentId == studentId) + 1;
+        var own = averages.First(x => x.StudentId == studentId).Average;
+
+        return Ok(new FinalGradeDto(
+            studentId, own.StudentFullName, own.GeneralAverage,
+            GradeAverageCalculator.GetMention(own.GeneralAverage),
+            FindLetterGrade(defaultScale, own.GeneralAverage),
+            rank, averages.Count, own.SubjectAverages));
+    }
+
+    private static string? FindLetterGrade(GradingScale? scale, decimal average) =>
+        scale?.Intervals.FirstOrDefault(i => average >= i.MinScore && average <= i.MaxScore)?.Grade;
+
+    private async Task<bool> HasAccessAsync(Guid studentId)
+    {
+        if (_currentUser.UserId is null || _currentUser.Role is null) return false;
+        return await _accessPolicy.CanAccessStudentAsync(_currentUser.UserId.Value, _currentUser.Role, studentId);
+    }
+
+    private async Task<bool> CanAccessClassAsync(Guid classId)
+    {
+        if (_currentUser.Role != nameof(UserRole.Teacher)) return true;
+
+        return await _context.Classes.AnyAsync(c =>
+            c.Id == classId && c.HomeroomTeacher != null && c.HomeroomTeacher.UserId == _currentUser.UserId);
+    }
+}

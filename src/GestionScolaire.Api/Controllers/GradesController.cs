@@ -41,6 +41,9 @@ public class GradesController : ControllerBase
         if (student is null || subject is null)
             return NotFound(new { message = "Élève ou matière introuvable." });
 
+        if (request.AssessmentPlanId.HasValue && await _context.AssessmentPlans.FindAsync(request.AssessmentPlanId.Value) is null)
+            return NotFound(new { message = "Plan d'évaluation introuvable." });
+
         if (!await HasAccessAsync(request.StudentId)) return Forbid();
 
         var grade = new Grade
@@ -54,7 +57,8 @@ public class GradesController : ControllerBase
             Coefficient = request.Coefficient,
             Type = request.Type,
             Term = request.Term,
-            Comment = request.Comment
+            Comment = request.Comment,
+            AssessmentPlanId = request.AssessmentPlanId
         };
 
         _context.Grades.Add(grade);
@@ -149,5 +153,5 @@ public class GradesController : ControllerBase
 
     private static GradeDto ToDto(Grade g, string studentName, string subjectName) => new(
         g.Id, g.StudentId, studentName, g.SubjectId, subjectName,
-        g.Score, g.MaxScore, g.Coefficient, g.Type.ToString(), g.Term, g.EvaluatedAt, g.Comment);
+        g.Score, g.MaxScore, g.Coefficient, g.Type.ToString(), g.Term, g.EvaluatedAt, g.Comment, g.AssessmentPlanId);
 }

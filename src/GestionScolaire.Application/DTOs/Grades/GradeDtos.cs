@@ -13,7 +13,8 @@ public record CreateGradeRequest(
     [Required] EvaluationType Type,
     [Required] string Term,
     string? Comment,
-    Guid? TeacherId = null
+    Guid? TeacherId = null,
+    Guid? AssessmentPlanId = null
 );
 
 public record UpdateGradeRequest(
@@ -35,7 +36,8 @@ public record GradeDto(
     string Type,
     string Term,
     DateTime EvaluatedAt,
-    string? Comment
+    string? Comment,
+    Guid? AssessmentPlanId = null
 );
 
 public record StudentAverageDto(

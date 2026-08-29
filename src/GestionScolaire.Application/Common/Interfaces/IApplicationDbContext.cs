@@ -30,6 +30,11 @@ public interface IApplicationDbContext
     DbSet<CourseSchedule> CourseSchedules { get; }
     DbSet<ProgramEnrollment> ProgramEnrollments { get; }
     DbSet<StudentLeaveApplication> StudentLeaveApplications { get; }
+    DbSet<GradingScale> GradingScales { get; }
+    DbSet<GradingScaleInterval> GradingScaleIntervals { get; }
+    DbSet<AssessmentGroup> AssessmentGroups { get; }
+    DbSet<AssessmentPlan> AssessmentPlans { get; }
+    DbSet<AssessmentCriteria> AssessmentCriteria { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }
