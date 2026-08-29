@@ -13,6 +13,7 @@ public class AssessmentPlanConfiguration : IEntityTypeConfiguration<AssessmentPl
 
         builder.Property(p => p.Name).IsRequired().HasMaxLength(150);
         builder.Property(p => p.MaxScore).HasColumnType("decimal(6,2)");
+        builder.Property(p => p.Status).HasConversion<string>().HasMaxLength(20);
 
         builder.HasOne(p => p.Course)
             .WithMany()

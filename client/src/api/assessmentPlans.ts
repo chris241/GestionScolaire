@@ -1,5 +1,12 @@
 import { apiClient } from './client';
-import type { AssessmentPlan } from '../types';
+import type { AssessmentPlan, AssessmentPlanStatus } from '../types';
+
+// L'API attend la valeur numérique sous-jacente de l'enum AssessmentPlanStatus (pas de JsonStringEnumConverter côté serveur).
+const STATUS_VALUES: Record<AssessmentPlanStatus, number> = {
+  Draft: 1,
+  Scheduled: 2,
+  Completed: 3,
+};
 
 export async function fetchAssessmentPlans(params?: { classId?: string; academicTermId?: string }): Promise<AssessmentPlan[]> {
   const { data } = await apiClient.get<AssessmentPlan[]>('/assessmentplans', { params });
@@ -29,4 +36,9 @@ export async function addAssessmentCriteria(
   request: { name: string; maxScore: number }
 ): Promise<void> {
   await apiClient.post(`/assessmentplans/${planId}/criteria`, request);
+}
+
+export async function updateAssessmentPlanStatus(planId: string, status: AssessmentPlanStatus): Promise<AssessmentPlan> {
+  const { data } = await apiClient.put<AssessmentPlan>(`/assessmentplans/${planId}/status`, { status: STATUS_VALUES[status] });
+  return data;
 }

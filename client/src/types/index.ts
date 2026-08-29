@@ -350,8 +350,11 @@ export interface AssessmentPlan {
   assessmentGroupId: string;
   assessmentGroupName: string;
   gradingScaleId: string | null;
+  status: AssessmentPlanStatus;
   criteria: AssessmentCriteria[];
 }
+
+export type AssessmentPlanStatus = 'Draft' | 'Scheduled' | 'Completed';
 
 export interface FinalGrade {
   studentId: string;
@@ -408,6 +411,24 @@ export interface Invoice {
   feeScheduleId: string;
   feeStructureName: string;
   academicTermName: string;
+}
+
+export interface StudentFeeCollection {
+  studentId: string;
+  studentFullName: string;
+  className: string;
+  invoicedAmount: number;
+  paidAmount: number;
+  outstandingAmount: number;
+}
+
+export interface ProgramFeeCollection {
+  programId: string;
+  programName: string;
+  studentCount: number;
+  invoicedAmount: number;
+  paidAmount: number;
+  outstandingAmount: number;
 }
 
 export interface Guardian {

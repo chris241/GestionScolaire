@@ -10,6 +10,9 @@ const STATUS_STYLES: Record<string, { label: string; className: string }> = {
   Accepted: { label: 'Accepté', className: 'bg-success-soft text-success' },
   Rejected: { label: 'Refusé', className: 'bg-danger-soft text-danger' },
   Enrolled: { label: 'Inscrit', className: 'bg-success-soft text-success' },
+  Draft: { label: 'Brouillon', className: 'bg-border text-slate-soft' },
+  Scheduled: { label: 'Planifié', className: 'bg-warning-soft text-warning' },
+  Completed: { label: 'Terminé', className: 'bg-success-soft text-success' },
 };
 
 export function StatusBadge({ status }: { status: string }) {

@@ -102,6 +102,21 @@ public class AssessmentPlansController : ControllerBase
         return Ok(new AssessmentCriteriaDto(criteria.Id, criteria.Name, criteria.MaxScore));
     }
 
+    [HttpPut("{id:guid}/status")]
+    [Authorize(Roles = "Director,Teacher")]
+    public async Task<ActionResult<AssessmentPlanDto>> UpdateStatus(Guid id, UpdateAssessmentPlanStatusRequest request)
+    {
+        var plan = await _context.AssessmentPlans.FindAsync(id);
+        if (plan is null) return NotFound();
+        if (!await CanAccessClassAsync(plan.ClassId)) return Forbid();
+
+        plan.Status = request.Status;
+        await _context.SaveChangesAsync();
+
+        var full = await BaseQuery().FirstAsync(p => p.Id == id);
+        return Ok(ToDto(full));
+    }
+
     [HttpDelete("criteria/{criteriaId:guid}")]
     [Authorize(Roles = "Director,Teacher")]
     public async Task<IActionResult> DeleteCriteria(Guid criteriaId)
@@ -136,6 +151,6 @@ public class AssessmentPlansController : ControllerBase
         p.ClassId, p.Class.Name,
         p.AcademicTermId, p.AcademicTerm.Name,
         p.AssessmentGroupId, p.AssessmentGroup.Name,
-        p.GradingScaleId,
+        p.GradingScaleId, p.Status.ToString(),
         p.Criteria.Select(c => new AssessmentCriteriaDto(c.Id, c.Name, c.MaxScore)).ToList());
 }
