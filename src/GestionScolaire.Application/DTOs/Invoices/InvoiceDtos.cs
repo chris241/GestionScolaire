@@ -12,3 +12,21 @@ public record InvoiceDto(
     string FeeStructureName,
     string AcademicTermName
 );
+
+public record StudentFeeCollectionDto(
+    Guid StudentId,
+    string StudentFullName,
+    string ClassName,
+    decimal InvoicedAmount,
+    decimal PaidAmount,
+    decimal OutstandingAmount
+);
+
+public record ProgramFeeCollectionDto(
+    Guid ProgramId,
+    string ProgramName,
+    int StudentCount,
+    decimal InvoicedAmount,
+    decimal PaidAmount,
+    decimal OutstandingAmount
+);

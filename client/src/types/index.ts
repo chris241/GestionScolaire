@@ -410,6 +410,24 @@ export interface Invoice {
   academicTermName: string;
 }
 
+export interface StudentFeeCollection {
+  studentId: string;
+  studentFullName: string;
+  className: string;
+  invoicedAmount: number;
+  paidAmount: number;
+  outstandingAmount: number;
+}
+
+export interface ProgramFeeCollection {
+  programId: string;
+  programName: string;
+  studentCount: number;
+  invoicedAmount: number;
+  paidAmount: number;
+  outstandingAmount: number;
+}
+
 export interface Guardian {
   id: string;
   firstName: string;
