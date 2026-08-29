@@ -35,6 +35,11 @@ public class AppDbContext : DbContext, IApplicationDbContext
     public DbSet<CourseSchedule> CourseSchedules => Set<CourseSchedule>();
     public DbSet<ProgramEnrollment> ProgramEnrollments => Set<ProgramEnrollment>();
     public DbSet<StudentLeaveApplication> StudentLeaveApplications => Set<StudentLeaveApplication>();
+    public DbSet<GradingScale> GradingScales => Set<GradingScale>();
+    public DbSet<GradingScaleInterval> GradingScaleIntervals => Set<GradingScaleInterval>();
+    public DbSet<AssessmentGroup> AssessmentGroups => Set<AssessmentGroup>();
+    public DbSet<AssessmentPlan> AssessmentPlans => Set<AssessmentPlan>();
+    public DbSet<AssessmentCriteria> AssessmentCriteria => Set<AssessmentCriteria>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, GraduationCap, NotebookPen, Wallet, Settings, Users, UserPlus, LogOut, BookOpen, CalendarClock, ClipboardCheck } from 'lucide-react';
+import { LayoutDashboard, GraduationCap, NotebookPen, Wallet, Settings, Users, UserPlus, LogOut, BookOpen, CalendarClock, ClipboardCheck, Trophy } from 'lucide-react';
 import { useAuth } from '../lib/AuthContext';
 
 const NAV_ITEMS: {
@@ -14,6 +14,7 @@ const NAV_ITEMS: {
   { to: '/', label: 'Tableau de bord', roleLabels: {}, icon: LayoutDashboard, end: true, hideFor: ['Parent', 'Teacher'] },
   { to: '/eleves', label: 'Élèves', roleLabels: { Parent: 'Mes enfants', Teacher: 'Mes élèves' }, icon: GraduationCap, end: false, hideFor: [] },
   { to: '/notes', label: 'Notes', roleLabels: {}, icon: NotebookPen, end: false, hideFor: [] },
+  { to: '/resultats', label: 'Résultats finaux', roleLabels: {}, icon: Trophy, end: false, hideFor: ['Parent'] },
   { to: '/presences', label: 'Présences', roleLabels: {}, icon: ClipboardCheck, end: false, hideFor: [] },
   { to: '/paiements', label: 'Paiements', roleLabels: {}, icon: Wallet, end: false, hideFor: ['Teacher'] },
   { to: '/admissions', label: 'Admissions', roleLabels: {}, icon: UserPlus, end: false, hideFor: ['Teacher', 'Parent'] },

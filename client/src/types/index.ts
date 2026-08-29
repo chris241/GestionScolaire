@@ -273,3 +273,59 @@ export interface LeaveApplication {
   decisionDate: string | null;
   decisionNotes: string | null;
 }
+
+export interface GradingScaleInterval {
+  id: string;
+  grade: string;
+  minScore: number;
+  maxScore: number;
+}
+
+export interface GradingScale {
+  id: string;
+  name: string;
+  isDefault: boolean;
+  intervals: GradingScaleInterval[];
+}
+
+export interface AssessmentGroup {
+  id: string;
+  name: string;
+  weightage: number;
+  academicTermId: string;
+  academicTermName: string;
+}
+
+export interface AssessmentCriteria {
+  id: string;
+  name: string;
+  maxScore: number;
+}
+
+export interface AssessmentPlan {
+  id: string;
+  name: string;
+  maxScore: number;
+  plannedDate: string;
+  courseId: string;
+  courseName: string;
+  classId: string;
+  className: string;
+  academicTermId: string;
+  academicTermName: string;
+  assessmentGroupId: string;
+  assessmentGroupName: string;
+  gradingScaleId: string | null;
+  criteria: AssessmentCriteria[];
+}
+
+export interface FinalGrade {
+  studentId: string;
+  studentFullName: string;
+  generalAverage: number;
+  mention: string;
+  letterGrade: string | null;
+  classRank: number;
+  classSize: number;
+  subjectAverages: StudentAverage[];
+}

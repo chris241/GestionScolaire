@@ -125,6 +125,39 @@ public static class DbSeeder
             });
         }
 
+        var gradingScale = new GradingScale { Name = "Barème standard", IsDefault = true };
+        context.GradingScales.Add(gradingScale);
+        context.GradingScaleIntervals.AddRange(
+            new GradingScaleInterval { GradingScale = gradingScale, Grade = "A", MinScore = 16, MaxScore = 20 },
+            new GradingScaleInterval { GradingScale = gradingScale, Grade = "B", MinScore = 14, MaxScore = 15.99m },
+            new GradingScaleInterval { GradingScale = gradingScale, Grade = "C", MinScore = 12, MaxScore = 13.99m },
+            new GradingScaleInterval { GradingScale = gradingScale, Grade = "D", MinScore = 10, MaxScore = 11.99m },
+            new GradingScaleInterval { GradingScale = gradingScale, Grade = "E", MinScore = 0, MaxScore = 9.99m });
+
+        var assessmentGroups = new[]
+        {
+            new AssessmentGroup { Name = "Devoirs", Weightage = 40, AcademicTerm = academicTerms[0] },
+            new AssessmentGroup { Name = "Compositions", Weightage = 60, AcademicTerm = academicTerms[0] },
+        };
+        context.AssessmentGroups.AddRange(assessmentGroups);
+
+        var mathsCourse = courses.First(c => c.Name == "Mathématiques");
+        var assessmentPlan = new AssessmentPlan
+        {
+            Name = "Composition de Mathématiques — Trimestre 1",
+            Course = mathsCourse,
+            Class = classes[0],
+            AcademicTerm = academicTerms[0],
+            AssessmentGroup = assessmentGroups[1],
+            GradingScale = gradingScale,
+            MaxScore = 20,
+            PlannedDate = DateTime.UtcNow.AddDays(-11)
+        };
+        context.AssessmentPlans.Add(assessmentPlan);
+        context.AssessmentCriteria.AddRange(
+            new AssessmentCriteria { AssessmentPlan = assessmentPlan, Name = "Écrit", MaxScore = 15 },
+            new AssessmentCriteria { AssessmentPlan = assessmentPlan, Name = "Oral", MaxScore = 5 });
+
         var studentCategories = new[]
         {
             new StudentCategory { Name = "Standard", Description = "Scolarité classique" },
