@@ -47,6 +47,13 @@ public class StudentConfiguration : IEntityTypeConfiguration<Student>
             .WithOne(l => l.Student)
             .HasForeignKey(l => l.StudentId)
             .OnDelete(DeleteBehavior.Cascade);
+
+        builder.HasOne(s => s.User)
+            .WithOne()
+            .HasForeignKey<Student>(s => s.UserId)
+            .OnDelete(DeleteBehavior.SetNull);
+
+        builder.HasIndex(s => s.UserId).IsUnique().HasFilter("\"UserId\" IS NOT NULL");
     }
 }
 

@@ -263,6 +263,17 @@ public static class DbSeeder
             });
         }
 
+        var studentPortalUser = new User
+        {
+            Email = "eleve1@ecole.mg",
+            PasswordHash = PasswordHasher.Hash("Password123!"),
+            FirstName = students[0].FirstName,
+            LastName = students[0].LastName,
+            Role = UserRole.Student
+        };
+        context.Users.Add(studentPortalUser);
+        students[0].User = studentPortalUser;
+
         var random = new Random(42);
         const string term = "Trimestre 1";
 

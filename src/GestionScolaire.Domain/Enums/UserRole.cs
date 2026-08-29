@@ -4,5 +4,6 @@ public enum UserRole
 {
     Director = 1,
     Teacher = 2,
-    Parent = 3
+    Parent = 3,
+    Student = 4
 }

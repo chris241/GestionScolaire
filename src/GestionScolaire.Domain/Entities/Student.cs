@@ -23,6 +23,10 @@ public class Student : BaseEntity
     public Guid? StudentBatchId { get; set; }
     public StudentBatch? StudentBatch { get; set; }
 
+    /// Compte de connexion de l'élève lui-même (portail élève) ; nullable, la plupart des élèves n'en ont pas.
+    public Guid? UserId { get; set; }
+    public User? User { get; set; }
+
     public ICollection<StudentParent> Parents { get; set; } = new List<StudentParent>();
     public ICollection<Grade> Grades { get; set; } = new List<Grade>();
     public ICollection<Attendance> Attendances { get; set; } = new List<Attendance>();

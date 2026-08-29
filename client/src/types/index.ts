@@ -82,7 +82,7 @@ export interface UserProfile {
   email: string;
   firstName: string;
   lastName: string;
-  role: 'Director' | 'Teacher' | 'Parent';
+  role: 'Director' | 'Teacher' | 'Parent' | 'Student';
 }
 
 export interface AcademicYear {

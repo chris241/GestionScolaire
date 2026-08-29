@@ -208,6 +208,8 @@ function StaffAttendance() {
 }
 
 function ParentAttendance() {
+  const { user } = useAuth();
+  const canRequestLeave = user?.role === 'Parent';
   const [students, setStudents] = useState<Student[]>([]);
   const [selectedStudentId, setSelectedStudentId] = useState('');
   const [records, setRecords] = useState<AttendanceRecord[]>([]);
@@ -322,6 +324,7 @@ function ParentAttendance() {
           ))}
         </div>
 
+        {canRequestLeave && (
         <form onSubmit={handleRequestLeave} className="mt-4 flex flex-col gap-3 border-t border-border pt-4">
           <h3 className="text-sm font-semibold text-slate">Nouvelle demande</h3>
           <div className="grid grid-cols-2 gap-3">
@@ -355,6 +358,7 @@ function ParentAttendance() {
             {requesting ? 'Envoi...' : 'Envoyer la demande'}
           </button>
         </form>
+        )}
       </div>
     </div>
   );
