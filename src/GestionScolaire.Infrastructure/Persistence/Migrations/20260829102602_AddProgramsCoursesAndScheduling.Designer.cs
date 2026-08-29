@@ -3,6 +3,7 @@ using System;
 using GestionScolaire.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace GestionScolaire.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260829102602_AddProgramsCoursesAndScheduling")]
+    partial class AddProgramsCoursesAndScheduling
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -820,52 +823,6 @@ namespace GestionScolaire.Infrastructure.Persistence.Migrations
                     b.ToTable("StudentGroupMembers", (string)null);
                 });
 
-            modelBuilder.Entity("GestionScolaire.Domain.Entities.StudentLeaveApplication", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<DateTime?>("DecisionDate")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("DecisionNotes")
-                        .HasColumnType("text");
-
-                    b.Property<DateTime>("EndDate")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("Reason")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<Guid>("RequestedByUserId")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTime>("StartDate")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("character varying(20)");
-
-                    b.Property<Guid>("StudentId")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("StudentId", "Status");
-
-                    b.ToTable("StudentLeaveApplications", (string)null);
-                });
-
             modelBuilder.Entity("GestionScolaire.Domain.Entities.StudentLog", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1371,17 +1328,6 @@ namespace GestionScolaire.Infrastructure.Persistence.Migrations
                     b.Navigation("Student");
 
                     b.Navigation("StudentGroup");
-                });
-
-            modelBuilder.Entity("GestionScolaire.Domain.Entities.StudentLeaveApplication", b =>
-                {
-                    b.HasOne("GestionScolaire.Domain.Entities.Student", "Student")
-                        .WithMany()
-                        .HasForeignKey("StudentId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Student");
                 });
 
             modelBuilder.Entity("GestionScolaire.Domain.Entities.StudentLog", b =>

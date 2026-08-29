@@ -70,12 +70,60 @@ public static class DbSeeder
         };
         context.Teachers.AddRange(teachers);
 
+        var academicProgram = new AcademicProgram
+        {
+            Name = "Collège Général",
+            Code = "COL-GEN",
+            Description = "Programme du collège, du niveau 6ème à la 3ème."
+        };
+        context.AcademicPrograms.Add(academicProgram);
+
         var classes = new[]
         {
-            new SchoolClass { Name = "6ème A", Level = "6ème", AcademicYear = academicYear, Capacity = 35, HomeroomTeacher = teachers[0] },
-            new SchoolClass { Name = "5ème B", Level = "5ème", AcademicYear = academicYear, Capacity = 35, HomeroomTeacher = teachers[1] },
+            new SchoolClass { Name = "6ème A", Level = "6ème", AcademicYear = academicYear, Program = academicProgram, Capacity = 35, HomeroomTeacher = teachers[0] },
+            new SchoolClass { Name = "5ème B", Level = "5ème", AcademicYear = academicYear, Program = academicProgram, Capacity = 35, HomeroomTeacher = teachers[1] },
         };
         context.Classes.AddRange(classes);
+
+        var rooms = new[]
+        {
+            new Room { Name = "Salle 101", Capacity = 40, Building = "Bâtiment A" },
+            new Room { Name = "Salle 102", Capacity = 40, Building = "Bâtiment A" },
+        };
+        context.Rooms.AddRange(rooms);
+
+        var courses = subjects.Select(s => new Course
+        {
+            Name = s.Name,
+            Code = s.Name[..Math.Min(3, s.Name.Length)].ToUpperInvariant(),
+            Program = academicProgram,
+            Subject = s
+        }).ToList();
+        context.Courses.AddRange(courses);
+
+        foreach (var course in courses)
+        {
+            context.Topics.Add(new Topic { Course = course, Name = $"Introduction à {course.Name}", Order = 1 });
+            context.Topics.Add(new Topic { Course = course, Name = $"Approfondissement — {course.Name}", Order = 2 });
+        }
+
+        var scheduleDays = new[] { DayOfWeek.Monday, DayOfWeek.Tuesday, DayOfWeek.Wednesday, DayOfWeek.Thursday, DayOfWeek.Friday };
+        for (var i = 0; i < courses.Count; i++)
+        {
+            var course = courses[i];
+            var teacher = i % 2 == 0 ? teachers[0] : teachers[1];
+            context.CourseSchedules.Add(new CourseSchedule
+            {
+                Course = course,
+                Room = rooms[i % rooms.Length],
+                Teacher = teacher,
+                Class = classes[i % classes.Length],
+                AcademicTerm = academicTerms[0],
+                DayOfWeek = scheduleDays[i % scheduleDays.Length],
+                StartTime = new TimeOnly(8 + (i % 4) * 2, 0),
+                EndTime = new TimeOnly(9 + (i % 4) * 2, 0)
+            });
+        }
 
         var studentCategories = new[]
         {
@@ -123,6 +171,15 @@ public static class DbSeeder
             });
         }
         context.Students.AddRange(students);
+
+        context.ProgramEnrollments.AddRange(students.Select(s => new ProgramEnrollment
+        {
+            Student = s,
+            Program = academicProgram,
+            AcademicYear = academicYear,
+            EnrollmentDate = s.EnrollmentDate,
+            Status = EnrollmentStatus.Active
+        }));
 
         var studentGroup = new StudentGroup
         {
@@ -225,6 +282,28 @@ public static class DbSeeder
                 RecordedByUserId = director.Id
             });
         }
+
+        context.StudentLeaveApplications.AddRange(
+            new StudentLeaveApplication
+            {
+                Student = students[2],
+                StartDate = DateTime.UtcNow.Date.AddDays(3),
+                EndDate = DateTime.UtcNow.Date.AddDays(5),
+                Reason = "Consultation médicale programmée.",
+                Status = LeaveApplicationStatus.Pending,
+                RequestedByUserId = parentUsers[2].Id
+            },
+            new StudentLeaveApplication
+            {
+                Student = students[4],
+                StartDate = DateTime.UtcNow.Date.AddDays(-10),
+                EndDate = DateTime.UtcNow.Date.AddDays(-8),
+                Reason = "Voyage familial.",
+                Status = LeaveApplicationStatus.Approved,
+                RequestedByUserId = parentUsers[4].Id,
+                DecisionDate = DateTime.UtcNow.AddDays(-12),
+                DecisionNotes = "Autorisé."
+            });
 
         context.StudentApplicants.AddRange(
             new StudentApplicant

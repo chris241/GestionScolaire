@@ -19,6 +19,9 @@ public class StudentApplicant : BaseEntity
     public Guid AcademicYearId { get; set; }
     public AcademicYear AcademicYear { get; set; } = null!;
 
+    public Guid? ProgramId { get; set; }
+    public AcademicProgram? Program { get; set; }
+
     public DateTime AppliedDate { get; set; } = DateTime.UtcNow;
     public AdmissionStatus Status { get; set; } = AdmissionStatus.Submitted;
     public DateTime? DecisionDate { get; set; }

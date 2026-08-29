@@ -27,6 +27,11 @@ public class StudentApplicantConfiguration : IEntityTypeConfiguration<StudentApp
             .HasForeignKey(a => a.ConvertedStudentId)
             .OnDelete(DeleteBehavior.Restrict);
 
+        builder.HasOne(a => a.Program)
+            .WithMany()
+            .HasForeignKey(a => a.ProgramId)
+            .OnDelete(DeleteBehavior.SetNull);
+
         builder.HasIndex(a => a.Status);
     }
 }

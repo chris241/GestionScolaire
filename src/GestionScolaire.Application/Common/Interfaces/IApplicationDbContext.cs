@@ -23,6 +23,13 @@ public interface IApplicationDbContext
     DbSet<StudentGroupMember> StudentGroupMembers { get; }
     DbSet<StudentLog> StudentLogs { get; }
     DbSet<StudentApplicant> StudentApplicants { get; }
+    DbSet<AcademicProgram> AcademicPrograms { get; }
+    DbSet<Room> Rooms { get; }
+    DbSet<Course> Courses { get; }
+    DbSet<Topic> Topics { get; }
+    DbSet<CourseSchedule> CourseSchedules { get; }
+    DbSet<ProgramEnrollment> ProgramEnrollments { get; }
+    DbSet<StudentLeaveApplication> StudentLeaveApplications { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }
