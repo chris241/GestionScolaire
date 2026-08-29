@@ -75,4 +75,83 @@ public class StudentsEndpointsTests
 
         Assert.Empty(mathIds.Intersect(frenchIds));
     }
+
+    [Fact]
+    public async Task Director_SeesSeededSiblingLink_Bidirectionally()
+    {
+        var client = await _factory.CreateClient().AsUserAsync("directeur@ecole.mg");
+
+        var students = await client.GetFromJsonAsync<List<StudentDto>>("/api/students");
+        var tojo = students!.Single(s => s.EnrollmentNumber == "MAT-2026-001");
+        var sitraka = students!.Single(s => s.EnrollmentNumber == "MAT-2026-006");
+
+        var tojoSiblings = await client.GetFromJsonAsync<List<SiblingDto>>($"/api/students/{tojo.Id}/siblings");
+        var sitrakaSiblings = await client.GetFromJsonAsync<List<SiblingDto>>($"/api/students/{sitraka.Id}/siblings");
+
+        Assert.Contains(tojoSiblings!, s => s.StudentId == sitraka.Id);
+        Assert.Contains(sitrakaSiblings!, s => s.StudentId == tojo.Id);
+    }
+
+    [Fact]
+    public async Task Director_CanAddAndRemoveSibling_BetweenTwoStudents()
+    {
+        var client = await _factory.CreateClient().AsUserAsync("directeur@ecole.mg");
+
+        var students = await client.GetFromJsonAsync<List<StudentDto>>("/api/students");
+        var a = students!.Single(s => s.EnrollmentNumber == "MAT-2026-003");
+        var b = students!.Single(s => s.EnrollmentNumber == "MAT-2026-004");
+
+        var addResponse = await client.PostAsync($"/api/students/{a.Id}/siblings/{b.Id}", null);
+        Assert.Equal(HttpStatusCode.NoContent, addResponse.StatusCode);
+
+        var aSiblings = await client.GetFromJsonAsync<List<SiblingDto>>($"/api/students/{a.Id}/siblings");
+        Assert.Contains(aSiblings!, s => s.StudentId == b.Id);
+
+        var removeResponse = await client.DeleteAsync($"/api/students/{a.Id}/siblings/{b.Id}");
+        Assert.Equal(HttpStatusCode.NoContent, removeResponse.StatusCode);
+
+        var aSiblingsAfter = await client.GetFromJsonAsync<List<SiblingDto>>($"/api/students/{a.Id}/siblings");
+        Assert.DoesNotContain(aSiblingsAfter!, s => s.StudentId == b.Id);
+    }
+
+    [Fact]
+    public async Task Director_CannotAddStudentAsOwnSibling()
+    {
+        var client = await _factory.CreateClient().AsUserAsync("directeur@ecole.mg");
+        var students = await client.GetFromJsonAsync<List<StudentDto>>("/api/students");
+        var a = students!.First();
+
+        var response = await client.PostAsync($"/api/students/{a.Id}/siblings/{a.Id}", null);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Teacher_CannotAddSibling()
+    {
+        var client = await _factory.CreateClient().AsUserAsync("prof.math@ecole.mg");
+        var students = await client.GetFromJsonAsync<List<StudentDto>>("/api/students");
+        var a = students!.First();
+        var b = students!.Last();
+
+        var response = await client.PostAsync($"/api/students/{a.Id}/siblings/{b.Id}", null);
+
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Parent_CanViewOwnChildSiblings_ButNotOtherChild()
+    {
+        var parent1 = await _factory.CreateClient().AsUserAsync("parent1@ecole.mg");
+        var parent2 = await _factory.CreateClient().AsUserAsync("parent2@ecole.mg");
+
+        var ownChild = (await parent1.GetFromJsonAsync<List<StudentDto>>("/api/students"))!.Single();
+        var otherChild = (await parent2.GetFromJsonAsync<List<StudentDto>>("/api/students"))!.Single();
+
+        var ownResponse = await parent1.GetAsync($"/api/students/{ownChild.Id}/siblings");
+        ownResponse.EnsureSuccessStatusCode();
+
+        var otherResponse = await parent1.GetAsync($"/api/students/{otherChild.Id}/siblings");
+        Assert.Equal(HttpStatusCode.Forbidden, otherResponse.StatusCode);
+    }
 }

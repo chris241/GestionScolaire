@@ -1,7 +1,17 @@
-import { useEffect, useState } from 'react';
-import { fetchStudents } from '../api/students';
-import type { Student } from '../types';
+import { useEffect, useState, type FormEvent } from 'react';
+import { fetchStudents, fetchSiblings, addSibling, removeSibling } from '../api/students';
+import {
+  fetchGuardians,
+  createGuardian,
+  fetchStudentGuardians,
+  linkGuardianToStudent,
+  unlinkGuardianFromStudent,
+} from '../api/guardians';
+import type { Guardian, Sibling, Student, StudentGuardianLink } from '../types';
 import { useAuth } from '../lib/AuthContext';
+
+const inputClass =
+  'rounded-xl border border-border bg-bg px-3.5 py-2.5 text-sm text-slate outline-none focus:border-primary focus:ring-2 focus:ring-primary/20';
 
 function formatDate(date: string) {
   return new Date(date).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' });
@@ -11,10 +21,12 @@ export function Students() {
   const { user } = useAuth();
   const isParent = user?.role === 'Parent';
   const isTeacher = user?.role === 'Teacher';
+  const isDirector = user?.role === 'Director';
   const [students, setStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState('');
+  const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -34,6 +46,8 @@ export function Students() {
       .toLowerCase()
       .includes(search.toLowerCase())
   );
+
+  const selectedStudent = students.find((s) => s.id === selectedStudentId) ?? null;
 
   return (
     <div className="mx-auto max-w-7xl px-6 py-8">
@@ -86,7 +100,13 @@ export function Students() {
               </tr>
             )}
             {filtered.map((student) => (
-              <tr key={student.id} className="border-t border-border">
+              <tr
+                key={student.id}
+                onClick={() => setSelectedStudentId(student.id === selectedStudentId ? null : student.id)}
+                className={`cursor-pointer border-t border-border transition-colors hover:bg-bg ${
+                  student.id === selectedStudentId ? 'bg-primary-soft/40' : ''
+                }`}
+              >
                 <td className="px-6 py-4 text-slate-soft">{student.enrollmentNumber}</td>
                 <td className="px-6 py-4 font-medium text-slate">{student.firstName} {student.lastName}</td>
                 <td className="px-6 py-4 text-slate-soft">{student.className}</td>
@@ -104,6 +124,257 @@ export function Students() {
             ))}
           </tbody>
         </table>
+      </div>
+
+      {selectedStudent && (
+        <StudentDetailPanel
+          key={selectedStudent.id}
+          student={selectedStudent}
+          allStudents={students}
+          isDirector={isDirector}
+        />
+      )}
+    </div>
+  );
+}
+
+function StudentDetailPanel({
+  student,
+  allStudents,
+  isDirector,
+}: {
+  student: Student;
+  allStudents: Student[];
+  isDirector: boolean;
+}) {
+  const [links, setLinks] = useState<StudentGuardianLink[]>([]);
+  const [siblings, setSiblings] = useState<Sibling[]>([]);
+  const [guardians, setGuardians] = useState<Guardian[]>([]);
+  const [error, setError] = useState<string | null>(null);
+
+  const [linkForm, setLinkForm] = useState({ guardianId: '', relationship: '', isPrimaryContact: false });
+  const [newGuardianForm, setNewGuardianForm] = useState({ firstName: '', lastName: '', phone: '', email: '', occupation: '', relationship: '' });
+  const [savingLink, setSavingLink] = useState(false);
+  const [savingNewGuardian, setSavingNewGuardian] = useState(false);
+
+  const [siblingToAdd, setSiblingToAdd] = useState('');
+  const [savingSibling, setSavingSibling] = useState(false);
+
+  useEffect(() => {
+    Promise.all([fetchStudentGuardians(student.id), fetchSiblings(student.id)])
+      .then(([guardianLinks, siblingList]) => {
+        setLinks(guardianLinks);
+        setSiblings(siblingList);
+      })
+      .catch(() => setError("Impossible de charger les tuteurs ou la fratrie."));
+
+    if (isDirector) {
+      fetchGuardians().then(setGuardians).catch(() => setError('Impossible de charger la liste des tuteurs.'));
+    }
+  }, [student.id, isDirector]);
+
+  async function refreshGuardianLinks() {
+    setLinks(await fetchStudentGuardians(student.id));
+  }
+
+  async function handleLinkExisting(event: FormEvent) {
+    event.preventDefault();
+    if (!linkForm.guardianId) return;
+
+    setSavingLink(true);
+    setError(null);
+    try {
+      await linkGuardianToStudent(linkForm.guardianId, student.id, {
+        relationship: linkForm.relationship,
+        isPrimaryContact: linkForm.isPrimaryContact,
+      });
+      await refreshGuardianLinks();
+      setLinkForm({ guardianId: '', relationship: '', isPrimaryContact: false });
+    } catch {
+      setError('Impossible de lier ce tuteur (peut-être déjà rattaché).');
+    } finally {
+      setSavingLink(false);
+    }
+  }
+
+  async function handleCreateAndLink(event: FormEvent) {
+    event.preventDefault();
+    setSavingNewGuardian(true);
+    setError(null);
+    try {
+      const created = await createGuardian({
+        firstName: newGuardianForm.firstName,
+        lastName: newGuardianForm.lastName,
+        phone: newGuardianForm.phone,
+        email: newGuardianForm.email || null,
+        occupation: newGuardianForm.occupation || null,
+      });
+      await linkGuardianToStudent(created.id, student.id, {
+        relationship: newGuardianForm.relationship,
+        isPrimaryContact: links.length === 0,
+      });
+      setGuardians((prev) => [...prev, created]);
+      await refreshGuardianLinks();
+      setNewGuardianForm({ firstName: '', lastName: '', phone: '', email: '', occupation: '', relationship: '' });
+    } catch {
+      setError('Impossible de créer ce tuteur.');
+    } finally {
+      setSavingNewGuardian(false);
+    }
+  }
+
+  async function handleUnlinkGuardian(guardianId: string) {
+    setError(null);
+    try {
+      await unlinkGuardianFromStudent(guardianId, student.id);
+      await refreshGuardianLinks();
+    } catch {
+      setError('Impossible de retirer ce tuteur.');
+    }
+  }
+
+  async function handleAddSibling(event: FormEvent) {
+    event.preventDefault();
+    if (!siblingToAdd) return;
+
+    setSavingSibling(true);
+    setError(null);
+    try {
+      await addSibling(student.id, siblingToAdd);
+      setSiblings(await fetchSiblings(student.id));
+      setSiblingToAdd('');
+    } catch {
+      setError('Impossible de lier cet élève comme frère/sœur (le lien existe peut-être déjà).');
+    } finally {
+      setSavingSibling(false);
+    }
+  }
+
+  async function handleRemoveSibling(siblingStudentId: string) {
+    setError(null);
+    try {
+      await removeSibling(student.id, siblingStudentId);
+      setSiblings(await fetchSiblings(student.id));
+    } catch {
+      setError('Impossible de retirer ce lien de fratrie.');
+    }
+  }
+
+  const linkedGuardianIds = new Set(links.map((l) => l.guardianId));
+  const linkableGuardians = guardians.filter((g) => !linkedGuardianIds.has(g.id));
+  const siblingIds = new Set(siblings.map((s) => s.studentId));
+  const linkableStudents = allStudents.filter((s) => s.id !== student.id && !siblingIds.has(s.id));
+
+  return (
+    <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
+      {error && (
+        <div className="lg:col-span-2 rounded-xl border border-danger/20 bg-danger-soft px-4 py-3 text-sm text-danger">
+          {error}
+        </div>
+      )}
+
+      <div className="rounded-2xl border border-border bg-surface p-6 shadow-sm">
+        <h2 className="text-base font-semibold text-slate">
+          Tuteurs — {student.firstName} {student.lastName}
+        </h2>
+        <div className="mt-4 flex flex-col gap-2">
+          {links.length === 0 && <p className="text-sm text-slate-soft">Aucun tuteur enregistré.</p>}
+          {links.map((link) => (
+            <div key={link.id} className="rounded-xl border border-border px-3.5 py-2.5">
+              <div className="flex items-center justify-between">
+                <p className="text-sm font-medium text-slate">
+                  {link.guardianFullName}
+                  {link.isPrimaryContact && (
+                    <span className="ml-2 rounded-full bg-primary-soft px-2 py-0.5 text-xs font-medium text-primary">Contact principal</span>
+                  )}
+                </p>
+                {isDirector && (
+                  <button type="button" onClick={() => handleUnlinkGuardian(link.guardianId)} className="text-xs font-medium text-danger hover:text-danger">
+                    Retirer
+                  </button>
+                )}
+              </div>
+              <p className="mt-1 text-xs text-slate-soft">
+                {link.relationship} · {link.phone}{link.email ? ` · ${link.email}` : ''}{link.occupation ? ` · ${link.occupation}` : ''}
+              </p>
+            </div>
+          ))}
+        </div>
+
+        {isDirector && (
+          <>
+            {linkableGuardians.length > 0 && (
+              <form onSubmit={handleLinkExisting} className="mt-4 flex flex-col gap-3 border-t border-border pt-4">
+                <h3 className="text-sm font-semibold text-slate">Lier un tuteur existant</h3>
+                <select value={linkForm.guardianId} onChange={(e) => setLinkForm({ ...linkForm, guardianId: e.target.value })} className={inputClass}>
+                  <option value="">Tuteur...</option>
+                  {linkableGuardians.map((g) => (
+                    <option key={g.id} value={g.id}>{g.fullName}</option>
+                  ))}
+                </select>
+                <div className="grid grid-cols-2 gap-3">
+                  <input required placeholder="Relation (ex: Père)" value={linkForm.relationship} onChange={(e) => setLinkForm({ ...linkForm, relationship: e.target.value })} className={inputClass} />
+                  <label className="flex items-center gap-2 text-sm text-slate-soft">
+                    <input type="checkbox" checked={linkForm.isPrimaryContact} onChange={(e) => setLinkForm({ ...linkForm, isPrimaryContact: e.target.checked })} />
+                    Contact principal
+                  </label>
+                </div>
+                <button type="submit" disabled={savingLink} className="w-fit rounded-xl bg-primary px-4 py-2.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-primary-hover disabled:opacity-60">
+                  {savingLink ? 'Liaison...' : 'Lier'}
+                </button>
+              </form>
+            )}
+
+            <form onSubmit={handleCreateAndLink} className="mt-4 flex flex-col gap-3 border-t border-border pt-4">
+              <h3 className="text-sm font-semibold text-slate">Créer un nouveau tuteur</h3>
+              <div className="grid grid-cols-2 gap-3">
+                <input required placeholder="Prénom" value={newGuardianForm.firstName} onChange={(e) => setNewGuardianForm({ ...newGuardianForm, firstName: e.target.value })} className={inputClass} />
+                <input required placeholder="Nom" value={newGuardianForm.lastName} onChange={(e) => setNewGuardianForm({ ...newGuardianForm, lastName: e.target.value })} className={inputClass} />
+                <input required placeholder="Téléphone" value={newGuardianForm.phone} onChange={(e) => setNewGuardianForm({ ...newGuardianForm, phone: e.target.value })} className={inputClass} />
+                <input required placeholder="Relation (ex: Mère)" value={newGuardianForm.relationship} onChange={(e) => setNewGuardianForm({ ...newGuardianForm, relationship: e.target.value })} className={inputClass} />
+                <input type="email" placeholder="Email (optionnel)" value={newGuardianForm.email} onChange={(e) => setNewGuardianForm({ ...newGuardianForm, email: e.target.value })} className={inputClass} />
+                <input placeholder="Profession (optionnel)" value={newGuardianForm.occupation} onChange={(e) => setNewGuardianForm({ ...newGuardianForm, occupation: e.target.value })} className={inputClass} />
+              </div>
+              <button type="submit" disabled={savingNewGuardian} className="w-fit rounded-xl bg-primary px-4 py-2.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-primary-hover disabled:opacity-60">
+                {savingNewGuardian ? 'Création...' : 'Créer et lier'}
+              </button>
+            </form>
+          </>
+        )}
+      </div>
+
+      <div className="rounded-2xl border border-border bg-surface p-6 shadow-sm">
+        <h2 className="text-base font-semibold text-slate">Fratrie</h2>
+        <div className="mt-4 flex flex-col gap-2">
+          {siblings.length === 0 && <p className="text-sm text-slate-soft">Aucun frère/sœur enregistré.</p>}
+          {siblings.map((s) => (
+            <div key={s.studentId} className="flex items-center justify-between rounded-xl border border-border px-3.5 py-2.5">
+              <div>
+                <p className="text-sm font-medium text-slate">{s.studentFullName}</p>
+                <p className="text-xs text-slate-soft">{s.enrollmentNumber} · {s.className}</p>
+              </div>
+              {isDirector && (
+                <button type="button" onClick={() => handleRemoveSibling(s.studentId)} className="text-xs font-medium text-danger hover:text-danger">
+                  Retirer
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+
+        {isDirector && linkableStudents.length > 0 && (
+          <form onSubmit={handleAddSibling} className="mt-4 flex gap-2 border-t border-border pt-4">
+            <select value={siblingToAdd} onChange={(e) => setSiblingToAdd(e.target.value)} className={`${inputClass} flex-1`}>
+              <option value="">Élève...</option>
+              {linkableStudents.map((s) => (
+                <option key={s.id} value={s.id}>{s.firstName} {s.lastName} — {s.className}</option>
+              ))}
+            </select>
+            <button type="submit" disabled={savingSibling} className="rounded-xl bg-primary px-4 py-2.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-primary-hover disabled:opacity-60">
+              {savingSibling ? 'Ajout...' : 'Ajouter'}
+            </button>
+          </form>
+        )}
       </div>
     </div>
   );
