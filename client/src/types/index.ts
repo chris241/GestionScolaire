@@ -350,8 +350,11 @@ export interface AssessmentPlan {
   assessmentGroupId: string;
   assessmentGroupName: string;
   gradingScaleId: string | null;
+  status: AssessmentPlanStatus;
   criteria: AssessmentCriteria[];
 }
+
+export type AssessmentPlanStatus = 'Draft' | 'Scheduled' | 'Completed';
 
 export interface FinalGrade {
   studentId: string;

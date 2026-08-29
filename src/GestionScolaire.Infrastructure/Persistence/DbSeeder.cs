@@ -151,7 +151,8 @@ public static class DbSeeder
             AssessmentGroup = assessmentGroups[1],
             GradingScale = gradingScale,
             MaxScore = 20,
-            PlannedDate = DateTime.UtcNow.AddDays(-11)
+            PlannedDate = DateTime.UtcNow.AddDays(-11),
+            Status = AssessmentPlanStatus.Completed
         };
         context.AssessmentPlans.Add(assessmentPlan);
         context.AssessmentCriteria.AddRange(

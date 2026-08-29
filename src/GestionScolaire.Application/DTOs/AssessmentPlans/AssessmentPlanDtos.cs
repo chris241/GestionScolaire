@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using GestionScolaire.Domain.Enums;
 
 namespace GestionScolaire.Application.DTOs.AssessmentPlans;
 
@@ -18,8 +19,11 @@ public record AssessmentPlanDto(
     Guid AssessmentGroupId,
     string AssessmentGroupName,
     Guid? GradingScaleId,
+    string Status,
     List<AssessmentCriteriaDto> Criteria
 );
+
+public record UpdateAssessmentPlanStatusRequest([Required] AssessmentPlanStatus Status);
 
 public record CreateAssessmentPlanRequest(
     [Required] string Name,

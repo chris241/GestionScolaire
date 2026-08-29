@@ -6,9 +6,10 @@ import { fetchAcademicTerms } from '../api/academicTerms';
 import { fetchAssessmentGroups, createAssessmentGroup, deleteAssessmentGroup } from '../api/assessmentGroups';
 import { fetchGradingScales, createGradingScale, addGradingScaleInterval, deleteGradingScale } from '../api/gradingScales';
 import { fetchCourses } from '../api/courses';
-import { createAssessmentPlan } from '../api/assessmentPlans';
+import { fetchAssessmentPlans, createAssessmentPlan, updateAssessmentPlanStatus } from '../api/assessmentPlans';
+import { StatusBadge } from '../components/StatusBadge';
 import { useAuth } from '../lib/AuthContext';
-import type { AcademicTerm, AssessmentGroup, Course, FinalGrade, GradingScale } from '../types';
+import type { AcademicTerm, AssessmentGroup, AssessmentPlan, AssessmentPlanStatus, Course, FinalGrade, GradingScale } from '../types';
 
 const inputClass =
   'rounded-xl border border-border bg-bg px-3.5 py-2.5 text-sm text-slate outline-none focus:border-primary focus:ring-2 focus:ring-primary/20';
@@ -25,6 +26,7 @@ export function FinalGrades() {
   const [groups, setGroups] = useState<AssessmentGroup[]>([]);
   const [scales, setScales] = useState<GradingScale[]>([]);
   const [courses, setCourses] = useState<Course[]>([]);
+  const [plans, setPlans] = useState<AssessmentPlan[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -71,6 +73,13 @@ export function FinalGrades() {
       .then(setFinalGrades)
       .catch(() => setError('Impossible de charger les résultats finaux.'));
   }, [selectedClassId, selectedTermName]);
+
+  useEffect(() => {
+    if (!isDirector || !selectedClassId) return;
+    fetchAssessmentPlans({ classId: selectedClassId })
+      .then(setPlans)
+      .catch(() => setError("Impossible de charger les plans d'évaluation."));
+  }, [isDirector, selectedClassId]);
 
   async function handleCreateGroup(event: FormEvent) {
     event.preventDefault();
@@ -159,7 +168,7 @@ export function FinalGrades() {
     setSavingPlan(true);
     setError(null);
     try {
-      await createAssessmentPlan({
+      const created = await createAssessmentPlan({
         name: planForm.name,
         maxScore: Number(planForm.maxScore),
         plannedDate: planForm.plannedDate,
@@ -169,11 +178,22 @@ export function FinalGrades() {
         assessmentGroupId: planForm.assessmentGroupId,
         gradingScaleId: null,
       });
+      setPlans((prev) => [created, ...prev]);
       setPlanForm({ name: '', courseId: '', assessmentGroupId: '', maxScore: '20', plannedDate: '' });
     } catch {
       setError("Impossible de créer le plan d'évaluation.");
     } finally {
       setSavingPlan(false);
+    }
+  }
+
+  async function handleUpdatePlanStatus(planId: string, status: AssessmentPlanStatus) {
+    setError(null);
+    try {
+      const updated = await updateAssessmentPlanStatus(planId, status);
+      setPlans((prev) => prev.map((p) => (p.id === planId ? updated : p)));
+    } catch {
+      setError('Impossible de mettre à jour le statut de ce plan.');
     }
   }
 
@@ -316,6 +336,35 @@ export function FinalGrades() {
                 {savingInterval ? 'Ajout...' : 'Ajouter'}
               </button>
             </form>
+          </div>
+
+          <div className="rounded-2xl border border-border bg-surface p-6 shadow-sm lg:col-span-2">
+            <h2 className="text-base font-semibold text-slate">Plans d'évaluation (classe sélectionnée)</h2>
+            <div className="mt-4 flex flex-col gap-2">
+              {plans.length === 0 && <p className="text-sm text-slate-soft">Aucun plan d'évaluation pour cette classe.</p>}
+              {plans.map((plan) => (
+                <div key={plan.id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border px-3.5 py-2.5">
+                  <div>
+                    <p className="text-sm font-medium text-slate">{plan.name}</p>
+                    <p className="text-xs text-slate-soft">
+                      {plan.courseName} · {plan.assessmentGroupName} · {new Date(plan.plannedDate).toLocaleDateString('fr-FR')}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <StatusBadge status={plan.status} />
+                    <select
+                      value={plan.status}
+                      onChange={(e) => handleUpdatePlanStatus(plan.id, e.target.value as AssessmentPlanStatus)}
+                      className={inputClass}
+                    >
+                      <option value="Draft">Brouillon</option>
+                      <option value="Scheduled">Planifié</option>
+                      <option value="Completed">Terminé</option>
+                    </select>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
 
           <div className="rounded-2xl border border-border bg-surface p-6 shadow-sm lg:col-span-2">

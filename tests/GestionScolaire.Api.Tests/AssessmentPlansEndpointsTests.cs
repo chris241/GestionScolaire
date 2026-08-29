@@ -5,6 +5,7 @@ using GestionScolaire.Application.DTOs.AssessmentGroups;
 using GestionScolaire.Application.DTOs.AssessmentPlans;
 using GestionScolaire.Application.DTOs.Courses;
 using GestionScolaire.Application.DTOs.Students;
+using GestionScolaire.Domain.Enums;
 using Xunit;
 
 namespace GestionScolaire.Api.Tests;
@@ -29,6 +30,44 @@ public class AssessmentPlansEndpointsTests
         Assert.NotNull(plans);
         var seeded = Assert.Single(plans!, p => p.Name.Contains("Mathématiques"));
         Assert.Equal(2, seeded.Criteria.Count);
+        Assert.Equal("Completed", seeded.Status);
+    }
+
+    [Fact]
+    public async Task Director_NewlyCreatedPlan_DefaultsToDraft_AndCanBeUpdated()
+    {
+        var client = await _factory.CreateClient().AsUserAsync("directeur@ecole.mg");
+
+        var students = await client.GetFromJsonAsync<List<StudentDto>>("/api/students");
+        var courses = await client.GetFromJsonAsync<List<CourseDto>>("/api/courses");
+        var groups = await client.GetFromJsonAsync<List<AssessmentGroupDto>>("/api/assessmentgroups");
+
+        var createResponse = await client.PostAsJsonAsync("/api/assessmentplans", new CreateAssessmentPlanRequest(
+            "Plan Test Statut", 20, DateTime.UtcNow.AddDays(5),
+            courses!.First().Id, students!.First().ClassId, groups!.First().AcademicTermId, groups!.First().Id, null));
+        var plan = await createResponse.Content.ReadFromJsonAsync<AssessmentPlanDto>();
+        Assert.Equal("Draft", plan!.Status);
+
+        var updateResponse = await client.PutAsJsonAsync($"/api/assessmentplans/{plan.Id}/status",
+            new UpdateAssessmentPlanStatusRequest(AssessmentPlanStatus.Scheduled));
+        updateResponse.EnsureSuccessStatusCode();
+        var updated = await updateResponse.Content.ReadFromJsonAsync<AssessmentPlanDto>();
+        Assert.Equal("Scheduled", updated!.Status);
+    }
+
+    [Fact]
+    public async Task Teacher_CannotUpdatePlanStatus_ForOtherClass()
+    {
+        var mathTeacher = await _factory.CreateClient().AsUserAsync("prof.math@ecole.mg");
+        var frenchTeacher = await _factory.CreateClient().AsUserAsync("prof.francais@ecole.mg");
+
+        var plans = await mathTeacher.GetFromJsonAsync<List<AssessmentPlanDto>>("/api/assessmentplans");
+        var seeded = plans!.Single(p => p.Name.Contains("Mathématiques"));
+
+        var response = await frenchTeacher.PutAsJsonAsync($"/api/assessmentplans/{seeded.Id}/status",
+            new UpdateAssessmentPlanStatusRequest(AssessmentPlanStatus.Draft));
+
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
     }
 
     [Fact]
