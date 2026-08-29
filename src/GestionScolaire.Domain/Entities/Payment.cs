@@ -18,4 +18,8 @@ public class Payment : BaseEntity
     public PaymentStatus Status { get; set; } = PaymentStatus.EnAttente;
     public string? Method { get; set; }
     public string? InvoiceNumber { get; set; }
+
+    /// Rattachement optionnel à une facture générée ; les paiements existants restent non rattachés (null).
+    public Guid? InvoiceId { get; set; }
+    public Invoice? Invoice { get; set; }
 }

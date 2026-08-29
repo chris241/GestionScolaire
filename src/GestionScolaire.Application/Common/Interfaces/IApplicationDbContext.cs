@@ -35,6 +35,11 @@ public interface IApplicationDbContext
     DbSet<AssessmentGroup> AssessmentGroups { get; }
     DbSet<AssessmentPlan> AssessmentPlans { get; }
     DbSet<AssessmentCriteria> AssessmentCriteria { get; }
+    DbSet<FeeCategory> FeeCategories { get; }
+    DbSet<FeeStructure> FeeStructures { get; }
+    DbSet<FeeStructureItem> FeeStructureItems { get; }
+    DbSet<FeeSchedule> FeeSchedules { get; }
+    DbSet<Invoice> Invoices { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }
