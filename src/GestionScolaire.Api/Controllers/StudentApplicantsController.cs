@@ -5,6 +5,7 @@ using GestionScolaire.Domain.Entities;
 using GestionScolaire.Domain.Enums;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 
 namespace GestionScolaire.Api.Controllers;
@@ -64,6 +65,45 @@ public class StudentApplicantsController : ControllerBase
             GuardianPhone = request.GuardianPhone,
             LevelAppliedFor = request.LevelAppliedFor,
             AcademicYearId = request.AcademicYearId,
+            Status = AdmissionStatus.Submitted
+        };
+
+        _context.StudentApplicants.Add(applicant);
+        await _context.SaveChangesAsync();
+
+        applicant.AcademicYear = year;
+        return Ok(ToDto(applicant));
+    }
+
+    /// Formulaire public de candidature : accessible sans compte, pour que les familles postulent directement.
+    /// Limité en débit par IP (aucun CAPTCHA disponible) ; le statut est toujours « Soumis » et l'année académique
+    /// est résolue côté serveur pour ne pas exposer d'identifiants internes à un visiteur anonyme.
+    [HttpPost("public")]
+    [AllowAnonymous]
+    [EnableRateLimiting("public-form")]
+    public async Task<ActionResult<StudentApplicantDto>> CreatePublic(PublicApplicantRequest request)
+    {
+        var year = await _context.AcademicYears.FirstOrDefaultAsync(y => y.IsCurrent);
+        if (year is null)
+            return StatusCode(StatusCodes.Status503ServiceUnavailable, new { message = "Les candidatures ne sont pas ouvertes pour le moment." });
+
+        var dateOfBirth = request.DateOfBirth.AsUtc();
+        if (dateOfBirth > DateTime.UtcNow)
+            return BadRequest(new { message = "Date de naissance invalide." });
+
+        var applicant = new StudentApplicant
+        {
+            FirstName = request.FirstName,
+            LastName = request.LastName,
+            DateOfBirth = dateOfBirth,
+            Gender = request.Gender,
+            Email = request.Email,
+            Phone = request.Phone,
+            GuardianName = request.GuardianName,
+            GuardianEmail = request.GuardianEmail,
+            GuardianPhone = request.GuardianPhone,
+            LevelAppliedFor = request.LevelAppliedFor,
+            AcademicYearId = year.Id,
             Status = AdmissionStatus.Submitted
         };
 

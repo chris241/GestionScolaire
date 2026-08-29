@@ -45,6 +45,9 @@ public class AppDbContext : DbContext, IApplicationDbContext
     public DbSet<FeeStructureItem> FeeStructureItems => Set<FeeStructureItem>();
     public DbSet<FeeSchedule> FeeSchedules => Set<FeeSchedule>();
     public DbSet<Invoice> Invoices => Set<Invoice>();
+    public DbSet<Guardian> Guardians => Set<Guardian>();
+    public DbSet<StudentGuardian> StudentGuardians => Set<StudentGuardian>();
+    public DbSet<StudentSibling> StudentSiblings => Set<StudentSibling>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

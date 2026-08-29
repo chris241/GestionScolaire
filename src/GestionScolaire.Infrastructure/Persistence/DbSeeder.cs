@@ -274,6 +274,32 @@ public static class DbSeeder
         context.Users.Add(studentPortalUser);
         students[0].User = studentPortalUser;
 
+        context.StudentSiblings.Add(new StudentSibling { Student = students[0], SiblingStudent = students[5] });
+
+        var sharedGuardian = new Guardian
+        {
+            FirstName = "Herizo",
+            LastName = "Randria",
+            Phone = "034 22 111 00",
+            Email = "herizo.randria@example.mg",
+            Occupation = "Ingénieur"
+        };
+        context.Guardians.Add(sharedGuardian);
+        context.StudentGuardians.AddRange(
+            new StudentGuardian { Student = students[0], Guardian = sharedGuardian, Relationship = "Père", IsPrimaryContact = true },
+            new StudentGuardian { Student = students[5], Guardian = sharedGuardian, Relationship = "Père", IsPrimaryContact = true });
+
+        var otherGuardian = new Guardian
+        {
+            FirstName = "Voninavoko",
+            LastName = "Rasoanaivo",
+            Phone = "034 33 222 11",
+            Email = null,
+            Occupation = "Commerçante"
+        };
+        context.Guardians.Add(otherGuardian);
+        context.StudentGuardians.Add(new StudentGuardian { Student = students[1], Guardian = otherGuardian, Relationship = "Mère", IsPrimaryContact = true });
+
         var random = new Random(42);
         const string term = "Trimestre 1";
 

@@ -17,6 +17,7 @@ import { Attendance } from './pages/Attendance';
 import { FinalGrades } from './pages/FinalGrades';
 import { Fees } from './pages/Fees';
 import { Teachers } from './pages/Teachers';
+import { PublicAdmission } from './pages/PublicAdmission';
 import { useAuth } from './lib/AuthContext';
 
 // Le tableau de bord est réservé au Directeur (les endpoints stats/paiements globaux lui sont restreints côté API).
@@ -34,6 +35,7 @@ function App() {
       <AuthProvider>
         <Routes>
           <Route path="/login" element={<Login />} />
+          <Route path="/candidature" element={<PublicAdmission />} />
           <Route
             path="/*"
             element={

@@ -1,4 +1,5 @@
 using System.Text;
+using System.Threading.RateLimiting;
 using GestionScolaire.Infrastructure;
 using GestionScolaire.Infrastructure.Identity;
 using GestionScolaire.Infrastructure.Persistence;
@@ -93,6 +94,21 @@ builder.Services.AddHangfire(config => config
 
 builder.Services.AddHangfireServer();
 
+// Limite les endpoints publics non authentifiés (ex: formulaire de candidature) contre les abus,
+// en l'absence de CAPTCHA ou d'un service anti-spam externe.
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    options.AddPolicy("public-form", httpContext => RateLimitPartition.GetFixedWindowLimiter(
+        partitionKey: httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+        factory: _ => new FixedWindowRateLimiterOptions
+        {
+            PermitLimit = 5,
+            Window = TimeSpan.FromMinutes(15),
+            QueueLimit = 0
+        }));
+});
+
 var app = builder.Build();
 
 // --- Pipeline ---
@@ -111,6 +127,7 @@ app.UseCors(CorsPolicy);
 
 app.UseAuthentication();
 app.UseAuthorization();
+app.UseRateLimiter();
 
 app.MapControllers();
 app.MapHangfireDashboard("/hangfire");

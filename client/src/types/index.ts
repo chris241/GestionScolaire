@@ -409,3 +409,31 @@ export interface Invoice {
   feeStructureName: string;
   academicTermName: string;
 }
+
+export interface Guardian {
+  id: string;
+  firstName: string;
+  lastName: string;
+  fullName: string;
+  phone: string;
+  email: string | null;
+  occupation: string | null;
+}
+
+export interface StudentGuardianLink {
+  id: string;
+  guardianId: string;
+  guardianFullName: string;
+  phone: string;
+  email: string | null;
+  occupation: string | null;
+  relationship: string;
+  isPrimaryContact: boolean;
+}
+
+export interface Sibling {
+  studentId: string;
+  studentFullName: string;
+  enrollmentNumber: string;
+  className: string;
+}

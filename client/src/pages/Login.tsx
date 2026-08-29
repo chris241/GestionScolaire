@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react';
-import { Navigate, useNavigate } from 'react-router-dom';
+import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { GraduationCap } from 'lucide-react';
 import { useAuth } from '../lib/AuthContext';
 
@@ -76,6 +76,10 @@ export function Login() {
           >
             {loading ? 'Connexion...' : 'Se connecter'}
           </button>
+
+          <Link to="/candidature" className="text-center text-sm text-slate-soft hover:text-slate">
+            Pas encore inscrit ? Déposer une candidature
+          </Link>
         </form>
       </div>
     </div>
