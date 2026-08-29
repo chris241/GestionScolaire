@@ -89,4 +89,133 @@ public class AttendanceEndpointsTests
         var otherResponse = await parent1.GetAsync($"/api/attendance/student/{otherChild.Id}");
         Assert.Equal(HttpStatusCode.Forbidden, otherResponse.StatusCode);
     }
+
+    [Fact]
+    public async Task Director_GetAbsentReport_ReturnsOnlyNonPresentStudents_ForMarkedDate()
+    {
+        var client = await _factory.CreateClient().AsUserAsync("directeur@ecole.mg");
+
+        var students = await client.GetFromJsonAsync<List<StudentDto>>("/api/students");
+        var classId = students!.First().ClassId;
+        var classStudents = students!.Where(s => s.ClassId == classId).ToList();
+        var date = new DateTime(2031, 3, 16);
+
+        var entries = classStudents.Select((s, i) =>
+            new AttendanceEntryRequest(s.Id, i % 2 == 0 ? AttendanceStatus.Absent : AttendanceStatus.Present, null)).ToList();
+        await client.PostAsJsonAsync("/api/attendance/bulk", new BulkMarkAttendanceRequest(classId, date, entries));
+
+        var report = await client.GetFromJsonAsync<List<AbsentStudentDto>>(
+            $"/api/attendance/reports/absent?date={date:yyyy-MM-dd}&classId={classId}");
+
+        Assert.NotNull(report);
+        var expectedAbsentCount = entries.Count(e => e.Status == AttendanceStatus.Absent);
+        Assert.Equal(expectedAbsentCount, report!.Count);
+        Assert.All(report, r => Assert.Equal("Absent", r.Status));
+    }
+
+    [Fact]
+    public async Task Teacher_GetAbsentReport_WithoutClassId_IsScopedToOwnClass()
+    {
+        var client = await _factory.CreateClient().AsUserAsync("prof.math@ecole.mg");
+
+        var ownStudents = await client.GetFromJsonAsync<List<StudentDto>>("/api/students");
+        var date = new DateTime(2031, 3, 17);
+
+        var entries = ownStudents!.Select(s => new AttendanceEntryRequest(s.Id, AttendanceStatus.Retard, null)).ToList();
+        await client.PostAsJsonAsync("/api/attendance/bulk", new BulkMarkAttendanceRequest(ownStudents!.First().ClassId, date, entries));
+
+        var report = await client.GetFromJsonAsync<List<AbsentStudentDto>>($"/api/attendance/reports/absent?date={date:yyyy-MM-dd}");
+
+        Assert.NotNull(report);
+        var ownIds = ownStudents!.Select(s => s.Id).ToHashSet();
+        Assert.All(report!, r => Assert.Contains(r.StudentId, ownIds));
+    }
+
+    [Fact]
+    public async Task Teacher_CannotGetAbsentReport_ForOtherClass()
+    {
+        var client = await _factory.CreateClient().AsUserAsync("prof.math@ecole.mg");
+        var directorClient = await _factory.CreateClient().AsUserAsync("directeur@ecole.mg");
+
+        var ownClassId = (await client.GetFromJsonAsync<List<StudentDto>>("/api/students"))!.First().ClassId;
+        var otherClassId = (await directorClient.GetFromJsonAsync<List<StudentDto>>("/api/students"))!
+            .First(s => s.ClassId != ownClassId).ClassId;
+
+        var response = await client.GetAsync($"/api/attendance/reports/absent?date=2031-03-16&classId={otherClassId}");
+
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Director_GetMonthlySheet_ReflectsMarkedDay()
+    {
+        var client = await _factory.CreateClient().AsUserAsync("directeur@ecole.mg");
+
+        var students = await client.GetFromJsonAsync<List<StudentDto>>("/api/students");
+        var classId = students!.First().ClassId;
+        var classStudents = students!.Where(s => s.ClassId == classId).ToList();
+        var date = new DateTime(2031, 3, 15);
+
+        var entries = classStudents.Select(s => new AttendanceEntryRequest(s.Id, AttendanceStatus.Excuse, null)).ToList();
+        await client.PostAsJsonAsync("/api/attendance/bulk", new BulkMarkAttendanceRequest(classId, date, entries));
+
+        var sheet = await client.GetFromJsonAsync<List<MonthlyAttendanceRowDto>>(
+            $"/api/attendance/reports/monthly?classId={classId}&year=2031&month=3");
+
+        Assert.NotNull(sheet);
+        Assert.Equal(classStudents.Count, sheet!.Count);
+        Assert.All(sheet, row => Assert.Equal("Excuse", row.DayStatuses[15]));
+    }
+
+    [Fact]
+    public async Task Teacher_CannotGetMonthlySheet_ForOtherClass()
+    {
+        var client = await _factory.CreateClient().AsUserAsync("prof.math@ecole.mg");
+        var directorClient = await _factory.CreateClient().AsUserAsync("directeur@ecole.mg");
+
+        var ownClassId = (await client.GetFromJsonAsync<List<StudentDto>>("/api/students"))!.First().ClassId;
+        var otherClassId = (await directorClient.GetFromJsonAsync<List<StudentDto>>("/api/students"))!
+            .First(s => s.ClassId != ownClassId).ClassId;
+
+        var response = await client.GetAsync($"/api/attendance/reports/monthly?classId={otherClassId}&year=2031&month=3");
+
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Director_GetBatchSummary_CountsMarkedEntries_ForSeededBatch()
+    {
+        var client = await _factory.CreateClient().AsUserAsync("directeur@ecole.mg");
+
+        var students = await client.GetFromJsonAsync<List<StudentDto>>("/api/students");
+        var classId = students!.First().ClassId;
+        var target = students!.First(s => s.ClassId == classId);
+
+        var day1 = new DateTime(2031, 3, 15);
+        var day2 = new DateTime(2031, 3, 16);
+        await client.PostAsJsonAsync("/api/attendance/bulk", new BulkMarkAttendanceRequest(
+            classId, day1, new List<AttendanceEntryRequest> { new(target.Id, AttendanceStatus.Present, null) }));
+        await client.PostAsJsonAsync("/api/attendance/bulk", new BulkMarkAttendanceRequest(
+            classId, day2, new List<AttendanceEntryRequest> { new(target.Id, AttendanceStatus.Absent, null) }));
+
+        var summaries = await client.GetFromJsonAsync<List<BatchAttendanceSummaryDto>>(
+            "/api/attendance/reports/batch-summary?startDate=2031-03-15&endDate=2031-03-16");
+
+        Assert.NotNull(summaries);
+        var batch = Assert.Single(summaries!);
+        var studentSummary = batch.Students.Single(s => s.StudentId == target.Id);
+        Assert.Equal(1, studentSummary.PresentCount);
+        Assert.Equal(1, studentSummary.AbsentCount);
+        Assert.Equal(2, studentSummary.TotalRecorded);
+    }
+
+    [Fact]
+    public async Task Teacher_CannotAccessBatchSummary()
+    {
+        var client = await _factory.CreateClient().AsUserAsync("prof.math@ecole.mg");
+
+        var response = await client.GetAsync("/api/attendance/reports/batch-summary?startDate=2031-03-15&endDate=2031-03-16");
+
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
 }

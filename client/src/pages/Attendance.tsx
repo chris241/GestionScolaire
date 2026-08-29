@@ -1,5 +1,12 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
-import { fetchAttendanceByClass, bulkMarkAttendance, fetchStudentAttendance } from '../api/attendance';
+import {
+  fetchAttendanceByClass,
+  bulkMarkAttendance,
+  fetchStudentAttendance,
+  fetchAbsentReport,
+  fetchMonthlyAttendance,
+  fetchBatchAttendanceSummary,
+} from '../api/attendance';
 import {
   fetchLeaveApplications,
   fetchStudentLeaveApplications,
@@ -8,7 +15,15 @@ import {
 } from '../api/leaveApplications';
 import { fetchStudents } from '../api/students';
 import { useAuth } from '../lib/AuthContext';
-import type { AttendanceRecord, AttendanceStatus, LeaveApplication, Student } from '../types';
+import type {
+  AbsentStudent,
+  AttendanceRecord,
+  AttendanceStatus,
+  BatchAttendanceSummary,
+  LeaveApplication,
+  MonthlyAttendanceRow,
+  Student,
+} from '../types';
 
 const inputClass =
   'rounded-xl border border-border bg-bg px-3.5 py-2.5 text-sm text-slate outline-none focus:border-primary focus:ring-2 focus:ring-primary/20';
@@ -27,8 +42,24 @@ const STATUS_BADGE: Record<AttendanceStatus, string> = {
   Excuse: 'bg-primary-soft text-primary',
 };
 
+const STATUS_LETTER: Record<AttendanceStatus, string> = {
+  Present: 'P',
+  Absent: 'A',
+  Retard: 'R',
+  Excuse: 'E',
+};
+
+const MONTH_NAMES = [
+  'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
+  'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre',
+];
+
 function today(): string {
   return new Date().toISOString().slice(0, 10);
+}
+
+function daysInMonth(year: number, month: number): number {
+  return new Date(year, month, 0).getDate();
 }
 
 export function Attendance() {
@@ -203,6 +234,218 @@ function StaffAttendance() {
           ))}
         </div>
       </div>
+
+      <AttendanceReports classOptions={classOptions} isDirector={isDirector} />
+    </div>
+  );
+}
+
+function AttendanceReports({ classOptions, isDirector }: { classOptions: [string, string][]; isDirector: boolean }) {
+  const [error, setError] = useState<string | null>(null);
+
+  const [absentDate, setAbsentDate] = useState(today());
+  const [absentClassId, setAbsentClassId] = useState('');
+  const [absentStudents, setAbsentStudents] = useState<AbsentStudent[]>([]);
+  const [loadingAbsent, setLoadingAbsent] = useState(false);
+
+  const now = new Date();
+  const [sheetClassId, setSheetClassId] = useState(classOptions[0]?.[0] ?? '');
+  const [sheetYear, setSheetYear] = useState(now.getFullYear());
+  const [sheetMonth, setSheetMonth] = useState(now.getMonth() + 1);
+  const [monthlyRows, setMonthlyRows] = useState<MonthlyAttendanceRow[]>([]);
+  const [loadingSheet, setLoadingSheet] = useState(false);
+
+  const [rangeStart, setRangeStart] = useState(today());
+  const [rangeEnd, setRangeEnd] = useState(today());
+  const [batchSummaries, setBatchSummaries] = useState<BatchAttendanceSummary[]>([]);
+  const [loadingBatches, setLoadingBatches] = useState(false);
+
+  useEffect(() => {
+    if (!sheetClassId && classOptions.length > 0) setSheetClassId(classOptions[0][0]);
+  }, [classOptions, sheetClassId]);
+
+  useEffect(() => {
+    setLoadingAbsent(true);
+    fetchAbsentReport(absentDate, absentClassId || undefined)
+      .then(setAbsentStudents)
+      .catch(() => setError('Impossible de charger le rapport des absences.'))
+      .finally(() => setLoadingAbsent(false));
+  }, [absentDate, absentClassId]);
+
+  useEffect(() => {
+    if (!sheetClassId) return;
+    setLoadingSheet(true);
+    fetchMonthlyAttendance(sheetClassId, sheetYear, sheetMonth)
+      .then(setMonthlyRows)
+      .catch(() => setError('Impossible de charger la feuille mensuelle.'))
+      .finally(() => setLoadingSheet(false));
+  }, [sheetClassId, sheetYear, sheetMonth]);
+
+  useEffect(() => {
+    if (!isDirector) return;
+    setLoadingBatches(true);
+    fetchBatchAttendanceSummary(rangeStart, rangeEnd)
+      .then(setBatchSummaries)
+      .catch(() => setError('Impossible de charger le résumé par lot.'))
+      .finally(() => setLoadingBatches(false));
+  }, [isDirector, rangeStart, rangeEnd]);
+
+  const dayCount = daysInMonth(sheetYear, sheetMonth);
+  const dayColumns = Array.from({ length: dayCount }, (_, i) => i + 1);
+
+  return (
+    <div className="mt-6 flex flex-col gap-6">
+      {error && (
+        <div className="rounded-xl border border-danger/20 bg-danger-soft px-4 py-3 text-sm text-danger">
+          {error}
+        </div>
+      )}
+
+      <div className="rounded-2xl border border-border bg-surface p-6 shadow-sm">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h2 className="text-base font-semibold text-slate">Absents &amp; retards du jour</h2>
+          <div className="flex flex-wrap items-center gap-3">
+            <input type="date" value={absentDate} onChange={(e) => setAbsentDate(e.target.value)} className={inputClass} />
+            <select value={absentClassId} onChange={(e) => setAbsentClassId(e.target.value)} className={inputClass}>
+              <option value="">Toutes les classes</option>
+              {classOptions.map(([id, name]) => (
+                <option key={id} value={id}>{name}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+        <div className="mt-4 flex flex-col gap-2">
+          {!loadingAbsent && absentStudents.length === 0 && (
+            <p className="text-sm text-slate-soft">Aucun absent ni retard ce jour-là.</p>
+          )}
+          {absentStudents.map((s) => (
+            <div key={s.studentId} className="flex items-center justify-between rounded-xl border border-border px-3.5 py-2.5">
+              <div>
+                <p className="text-sm font-medium text-slate">{s.studentFullName}</p>
+                <p className="text-xs text-slate-soft">{s.className}{s.comment ? ` · ${s.comment}` : ''}</p>
+              </div>
+              <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${STATUS_BADGE[s.status]}`}>
+                {STATUS_LABELS[s.status]}
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="rounded-2xl border border-border bg-surface p-6 shadow-sm">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h2 className="text-base font-semibold text-slate">Feuille de présence mensuelle</h2>
+          <div className="flex flex-wrap items-center gap-3">
+            <select value={sheetClassId} onChange={(e) => setSheetClassId(e.target.value)} className={inputClass}>
+              {classOptions.map(([id, name]) => (
+                <option key={id} value={id}>{name}</option>
+              ))}
+            </select>
+            <select value={sheetMonth} onChange={(e) => setSheetMonth(Number(e.target.value))} className={inputClass}>
+              {MONTH_NAMES.map((name, i) => (
+                <option key={name} value={i + 1}>{name}</option>
+              ))}
+            </select>
+            <input
+              type="number"
+              value={sheetYear}
+              onChange={(e) => setSheetYear(Number(e.target.value))}
+              className={`${inputClass} w-24`}
+            />
+          </div>
+        </div>
+
+        {!loadingSheet && monthlyRows.length === 0 && (
+          <p className="mt-4 text-sm text-slate-soft">Aucun élève dans cette classe.</p>
+        )}
+
+        {monthlyRows.length > 0 && (
+          <div className="mt-4 overflow-x-auto">
+            <table className="text-left text-xs">
+              <thead>
+                <tr>
+                  <th className="sticky left-0 bg-surface px-2 py-2 font-medium text-slate-soft">Élève</th>
+                  {dayColumns.map((day) => (
+                    <th key={day} className="px-1.5 py-2 text-center font-medium text-slate-soft">{day}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {monthlyRows.map((row) => (
+                  <tr key={row.studentId} className="border-t border-border">
+                    <td className="sticky left-0 whitespace-nowrap bg-surface px-2 py-1.5 font-medium text-slate">
+                      {row.studentFullName}
+                    </td>
+                    {dayColumns.map((day) => {
+                      const status = row.dayStatuses[String(day)];
+                      return (
+                        <td key={day} className="px-1.5 py-1.5 text-center">
+                          {status ? (
+                            <span className={`inline-flex h-5 w-5 items-center justify-center rounded ${STATUS_BADGE[status]}`}>
+                              {STATUS_LETTER[status]}
+                            </span>
+                          ) : (
+                            <span className="text-slate-soft">·</span>
+                          )}
+                        </td>
+                      );
+                    })}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      {isDirector && (
+        <div className="rounded-2xl border border-border bg-surface p-6 shadow-sm">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <h2 className="text-base font-semibold text-slate">Résumé de présence par lot</h2>
+            <div className="flex flex-wrap items-center gap-3">
+              <input type="date" value={rangeStart} onChange={(e) => setRangeStart(e.target.value)} className={inputClass} />
+              <span className="text-sm text-slate-soft">→</span>
+              <input type="date" value={rangeEnd} onChange={(e) => setRangeEnd(e.target.value)} className={inputClass} />
+            </div>
+          </div>
+
+          {!loadingBatches && batchSummaries.length === 0 && (
+            <p className="mt-4 text-sm text-slate-soft">Aucune donnée pour cette période.</p>
+          )}
+
+          <div className="mt-4 flex flex-col gap-5">
+            {batchSummaries.map((batch) => (
+              <div key={batch.batchId}>
+                <h3 className="text-sm font-semibold text-slate">{batch.batchName}</h3>
+                <div className="mt-2 overflow-x-auto rounded-xl border border-border">
+                  <table className="w-full text-left text-sm">
+                    <thead>
+                      <tr className="text-xs uppercase tracking-wide text-slate-soft">
+                        <th className="px-4 py-2 font-medium">Élève</th>
+                        <th className="px-4 py-2 font-medium">Présent</th>
+                        <th className="px-4 py-2 font-medium">Absent</th>
+                        <th className="px-4 py-2 font-medium">Retard</th>
+                        <th className="px-4 py-2 font-medium">Excusé</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {batch.students.map((s) => (
+                        <tr key={s.studentId} className="border-t border-border">
+                          <td className="px-4 py-2 font-medium text-slate">{s.studentFullName}</td>
+                          <td className="px-4 py-2 text-slate-soft">{s.presentCount}</td>
+                          <td className="px-4 py-2 text-slate-soft">{s.absentCount}</td>
+                          <td className="px-4 py-2 text-slate-soft">{s.retardCount}</td>
+                          <td className="px-4 py-2 text-slate-soft">{s.excuseCount}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

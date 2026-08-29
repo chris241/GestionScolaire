@@ -24,3 +24,35 @@ public record BulkMarkAttendanceRequest(
     [Required] DateTime Date,
     [Required] List<AttendanceEntryRequest> Entries
 );
+
+public record AbsentStudentDto(
+    Guid StudentId,
+    string StudentFullName,
+    Guid ClassId,
+    string ClassName,
+    string Status,
+    string? Comment
+);
+
+/// DayStatuses associe le jour du mois (1-31) au statut du jour ; les jours sans enregistrement sont absents du dictionnaire.
+public record MonthlyAttendanceRowDto(
+    Guid StudentId,
+    string StudentFullName,
+    Dictionary<int, string> DayStatuses
+);
+
+public record StudentAttendanceSummaryDto(
+    Guid StudentId,
+    string StudentFullName,
+    int PresentCount,
+    int AbsentCount,
+    int RetardCount,
+    int ExcuseCount,
+    int TotalRecorded
+);
+
+public record BatchAttendanceSummaryDto(
+    Guid BatchId,
+    string BatchName,
+    List<StudentAttendanceSummaryDto> Students
+);
