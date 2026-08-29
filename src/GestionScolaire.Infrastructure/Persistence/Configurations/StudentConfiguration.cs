@@ -32,6 +32,21 @@ public class StudentConfiguration : IEntityTypeConfiguration<Student>
             .WithOne(p => p.Student)
             .HasForeignKey(p => p.StudentId)
             .OnDelete(DeleteBehavior.Cascade);
+
+        builder.HasOne(s => s.StudentCategory)
+            .WithMany(c => c.Students)
+            .HasForeignKey(s => s.StudentCategoryId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasOne(s => s.StudentBatch)
+            .WithMany(b => b.Students)
+            .HasForeignKey(s => s.StudentBatchId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasMany(s => s.Logs)
+            .WithOne(l => l.Student)
+            .HasForeignKey(l => l.StudentId)
+            .OnDelete(DeleteBehavior.Cascade);
     }
 }
 

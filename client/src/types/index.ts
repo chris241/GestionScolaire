@@ -109,3 +109,45 @@ export interface EducationSettings {
   currency: string;
   defaultMaxScore: number;
 }
+
+export interface StudentCategory {
+  id: string;
+  name: string;
+  description: string | null;
+}
+
+export interface StudentBatch {
+  id: string;
+  name: string;
+  startDate: string;
+  endDate: string | null;
+  description: string | null;
+  academicYearId: string;
+  academicYearName: string;
+}
+
+export interface StudentGroup {
+  id: string;
+  name: string;
+  groupType: string;
+  maxSize: number | null;
+  academicYearId: string;
+  academicYearName: string;
+  classId: string | null;
+  className: string | null;
+  memberCount: number;
+}
+
+export interface StudentGroupMember {
+  id: string;
+  studentId: string;
+  studentFullName: string;
+}
+
+export interface StudentLog {
+  id: string;
+  studentId: string;
+  logDate: string;
+  logType: string;
+  description: string;
+}

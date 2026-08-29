@@ -77,6 +77,22 @@ public static class DbSeeder
         };
         context.Classes.AddRange(classes);
 
+        var studentCategories = new[]
+        {
+            new StudentCategory { Name = "Standard", Description = "Scolarité classique" },
+            new StudentCategory { Name = "Boursier", Description = "Bénéficie d'une bourse d'études" },
+        };
+        context.StudentCategories.AddRange(studentCategories);
+
+        var studentBatch = new StudentBatch
+        {
+            Name = "Promotion 2025-2026",
+            AcademicYear = academicYear,
+            StartDate = academicYear.StartDate,
+            EndDate = academicYear.EndDate
+        };
+        context.StudentBatches.Add(studentBatch);
+
         var studentNames = new (string First, string Last, Gender Gender)[]
         {
             ("Tojo", "Randria", Gender.Masculin),
@@ -101,10 +117,41 @@ public static class DbSeeder
                 Gender = gender,
                 DateOfBirth = new DateTime(2013, 1, 1, 0, 0, 0, DateTimeKind.Utc).AddDays(i * 17),
                 EnrollmentDate = DateTime.UtcNow.AddMonths(-6),
-                Class = classes[i % 2]
+                Class = classes[i % 2],
+                StudentCategory = studentCategories[i % 2],
+                StudentBatch = studentBatch
             });
         }
         context.Students.AddRange(students);
+
+        var studentGroup = new StudentGroup
+        {
+            Name = "Club Sciences",
+            GroupType = "Club",
+            AcademicYear = academicYear,
+            MaxSize = 20
+        };
+        context.StudentGroups.Add(studentGroup);
+        context.StudentGroupMembers.AddRange(
+            students.Take(3).Select(s => new StudentGroupMember { StudentGroup = studentGroup, Student = s }));
+
+        context.StudentLogs.AddRange(
+            new StudentLog
+            {
+                Student = students[0],
+                LogDate = DateTime.UtcNow.AddDays(-5),
+                LogType = "Académique",
+                Description = "Excellent travail lors du dernier devoir de mathématiques.",
+                RecordedByUserId = director.Id
+            },
+            new StudentLog
+            {
+                Student = students[1],
+                LogDate = DateTime.UtcNow.AddDays(-2),
+                LogType = "Comportement",
+                Description = "A aidé un camarade en difficulté pendant le cours de sciences.",
+                RecordedByUserId = director.Id
+            });
 
         var parentUsers = students.Select((s, i) => new User
         {

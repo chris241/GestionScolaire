@@ -17,6 +17,11 @@ public interface IApplicationDbContext
     DbSet<AcademicYear> AcademicYears { get; }
     DbSet<AcademicTerm> AcademicTerms { get; }
     DbSet<EducationSettings> EducationSettings { get; }
+    DbSet<StudentCategory> StudentCategories { get; }
+    DbSet<StudentBatch> StudentBatches { get; }
+    DbSet<StudentGroup> StudentGroups { get; }
+    DbSet<StudentGroupMember> StudentGroupMembers { get; }
+    DbSet<StudentLog> StudentLogs { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }
