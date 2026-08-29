@@ -263,6 +263,37 @@ export interface AttendanceRecord {
   comment: string | null;
 }
 
+export interface AbsentStudent {
+  studentId: string;
+  studentFullName: string;
+  classId: string;
+  className: string;
+  status: AttendanceStatus;
+  comment: string | null;
+}
+
+export interface MonthlyAttendanceRow {
+  studentId: string;
+  studentFullName: string;
+  dayStatuses: Record<string, AttendanceStatus>;
+}
+
+export interface StudentAttendanceSummary {
+  studentId: string;
+  studentFullName: string;
+  presentCount: number;
+  absentCount: number;
+  retardCount: number;
+  excuseCount: number;
+  totalRecorded: number;
+}
+
+export interface BatchAttendanceSummary {
+  batchId: string;
+  batchName: string;
+  students: StudentAttendanceSummary[];
+}
+
 export type LeaveApplicationStatus = 'Pending' | 'Approved' | 'Rejected';
 
 export interface LeaveApplication {
