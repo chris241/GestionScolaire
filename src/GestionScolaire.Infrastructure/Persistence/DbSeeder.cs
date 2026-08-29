@@ -338,6 +338,63 @@ public static class DbSeeder
                 DecisionNotes = "Autorisé."
             });
 
+        var feeCategories = new[]
+        {
+            new FeeCategory { Name = "Scolarité", Description = "Frais de scolarité de base" },
+            new FeeCategory { Name = "Cantine", Description = "Restauration scolaire" },
+            new FeeCategory { Name = "Transport", Description = "Ramassage scolaire" },
+        };
+        context.FeeCategories.AddRange(feeCategories);
+
+        var feeStructure = new FeeStructure { Name = "Frais standard 2025-2026", AcademicYear = academicYear };
+        context.FeeStructures.Add(feeStructure);
+        context.FeeStructureItems.AddRange(
+            new FeeStructureItem { FeeStructure = feeStructure, FeeCategory = feeCategories[0], Amount = 200000 },
+            new FeeStructureItem { FeeStructure = feeStructure, FeeCategory = feeCategories[1], Amount = 40000 },
+            new FeeStructureItem { FeeStructure = feeStructure, FeeCategory = feeCategories[2], Amount = 10000 });
+
+        var feeSchedule = new FeeSchedule
+        {
+            FeeStructure = feeStructure,
+            AcademicTerm = academicTerms[0],
+            DueDate = academicTerms[0].StartDate.AddDays(30)
+        };
+        context.FeeSchedules.Add(feeSchedule);
+
+        var paidInvoice = new Invoice
+        {
+            Student = students[0],
+            FeeSchedule = feeSchedule,
+            InvoiceNumber = $"FAC-2025T1-{students[0].EnrollmentNumber[^3..]}",
+            TotalAmount = 250000,
+            DueDate = feeSchedule.DueDate,
+            Status = PaymentStatus.Paye
+        };
+        var pendingInvoice = new Invoice
+        {
+            Student = students[1],
+            FeeSchedule = feeSchedule,
+            InvoiceNumber = $"FAC-2025T1-{students[1].EnrollmentNumber[^3..]}",
+            TotalAmount = 250000,
+            DueDate = feeSchedule.DueDate,
+            Status = PaymentStatus.EnAttente
+        };
+        context.Invoices.AddRange(paidInvoice, pendingInvoice);
+
+        context.Payments.Add(new Payment
+        {
+            Student = students[0],
+            Invoice = paidInvoice,
+            Description = "Frais standard 2025-2026 — Trimestre 1",
+            Amount = 250000,
+            AcademicYear = "2025-2026",
+            Term = term,
+            DueDate = DateTime.UtcNow,
+            PaidAt = DateTime.UtcNow.AddDays(-3),
+            Status = PaymentStatus.Paye,
+            Method = "Mobile Money"
+        });
+
         context.StudentApplicants.AddRange(
             new StudentApplicant
             {

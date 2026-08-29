@@ -26,7 +26,7 @@ public class PaymentsEndpointsTests
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var payments = await response.Content.ReadFromJsonAsync<List<PaymentDto>>();
-        Assert.Equal(8, payments!.Count);
+        Assert.Equal(9, payments!.Count);
     }
 
     [Fact]
@@ -59,7 +59,7 @@ public class PaymentsEndpointsTests
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var payments = await response.Content.ReadFromJsonAsync<List<PaymentDto>>();
-        Assert.Single(payments!);
+        Assert.Equal(2, payments!.Count);
     }
 
     [Fact]
@@ -71,6 +71,34 @@ public class PaymentsEndpointsTests
         var otherChild = (await parent2Client.GetFromJsonAsync<List<StudentDto>>("/api/students"))!.Single();
 
         var response = await parent1Client.GetAsync($"/api/payments/student/{otherChild.Id}");
+
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Director_CanRecordPayment_WithoutInvoice()
+    {
+        var client = await _factory.CreateClient().AsUserAsync("directeur@ecole.mg");
+        var student = (await client.GetFromJsonAsync<List<StudentDto>>("/api/students"))!.First();
+
+        var response = await client.PostAsJsonAsync("/api/payments", new CreatePaymentRequest(
+            student.Id, "Frais de cantine", 40000, "2025-2026", "Trimestre 1", "Espèces", null));
+
+        response.EnsureSuccessStatusCode();
+        var created = await response.Content.ReadFromJsonAsync<PaymentDto>();
+        Assert.Equal("Paye", created!.Status);
+        Assert.NotNull(created.PaidAt);
+        Assert.Null(created.InvoiceId);
+    }
+
+    [Fact]
+    public async Task Teacher_CannotRecordPayment()
+    {
+        var client = await _factory.CreateClient().AsUserAsync("prof.math@ecole.mg");
+        var student = (await client.GetFromJsonAsync<List<StudentDto>>("/api/students"))!.First();
+
+        var response = await client.PostAsJsonAsync("/api/payments", new CreatePaymentRequest(
+            student.Id, "Interdit", 1000, "2025-2026", "Trimestre 1", "Espèces", null));
 
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
     }

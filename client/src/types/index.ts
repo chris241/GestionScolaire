@@ -26,6 +26,7 @@ export interface Payment {
   dueDate: string;
   paidAt: string | null;
   status: PaymentStatus;
+  invoiceId: string | null;
 }
 
 export interface Student {
@@ -328,4 +329,50 @@ export interface FinalGrade {
   classRank: number;
   classSize: number;
   subjectAverages: StudentAverage[];
+}
+
+export interface FeeCategory {
+  id: string;
+  name: string;
+  description: string | null;
+}
+
+export interface FeeStructureItem {
+  id: string;
+  feeCategoryId: string;
+  feeCategoryName: string;
+  amount: number;
+}
+
+export interface FeeSchedule {
+  id: string;
+  academicTermId: string;
+  academicTermName: string;
+  dueDate: string;
+  invoiceCount: number;
+}
+
+export interface FeeStructure {
+  id: string;
+  name: string;
+  academicYearId: string;
+  academicYearName: string;
+  programId: string | null;
+  programName: string | null;
+  totalAmount: number;
+  items: FeeStructureItem[];
+  schedules: FeeSchedule[];
+}
+
+export interface Invoice {
+  id: string;
+  studentId: string;
+  studentFullName: string;
+  invoiceNumber: string;
+  totalAmount: number;
+  dueDate: string;
+  status: PaymentStatus;
+  feeScheduleId: string;
+  feeStructureName: string;
+  academicTermName: string;
 }

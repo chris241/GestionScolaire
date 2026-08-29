@@ -40,6 +40,11 @@ public class AppDbContext : DbContext, IApplicationDbContext
     public DbSet<AssessmentGroup> AssessmentGroups => Set<AssessmentGroup>();
     public DbSet<AssessmentPlan> AssessmentPlans => Set<AssessmentPlan>();
     public DbSet<AssessmentCriteria> AssessmentCriteria => Set<AssessmentCriteria>();
+    public DbSet<FeeCategory> FeeCategories => Set<FeeCategory>();
+    public DbSet<FeeStructure> FeeStructures => Set<FeeStructure>();
+    public DbSet<FeeStructureItem> FeeStructureItems => Set<FeeStructureItem>();
+    public DbSet<FeeSchedule> FeeSchedules => Set<FeeSchedule>();
+    public DbSet<Invoice> Invoices => Set<Invoice>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

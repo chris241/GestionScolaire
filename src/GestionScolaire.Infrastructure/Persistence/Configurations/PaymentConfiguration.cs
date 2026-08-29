@@ -19,6 +19,11 @@ public class PaymentConfiguration : IEntityTypeConfiguration<Payment>
         builder.Property(p => p.Method).HasMaxLength(50);
         builder.Property(p => p.InvoiceNumber).HasMaxLength(50);
 
+        builder.HasOne(p => p.Invoice)
+            .WithMany(i => i.Payments)
+            .HasForeignKey(p => p.InvoiceId)
+            .OnDelete(DeleteBehavior.SetNull);
+
         builder.HasIndex(p => p.Status);
     }
 }
