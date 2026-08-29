@@ -30,6 +30,12 @@ public class StudentAccessPolicy : IStudentAccessPolicy
                 .AnyAsync(c => c.HomeroomTeacher != null && c.HomeroomTeacher.UserId == userId);
         }
 
+        if (parsedRole == UserRole.Student)
+        {
+            // Portail élève : accès uniquement à son propre dossier.
+            return await _context.Students.AnyAsync(s => s.Id == studentId && s.UserId == userId);
+        }
+
         // Parent
         return await _context.StudentParents
             .AnyAsync(sp => sp.StudentId == studentId && sp.ParentUserId == userId);

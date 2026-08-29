@@ -70,12 +70,109 @@ public static class DbSeeder
         };
         context.Teachers.AddRange(teachers);
 
+        var academicProgram = new AcademicProgram
+        {
+            Name = "Collège Général",
+            Code = "COL-GEN",
+            Description = "Programme du collège, du niveau 6ème à la 3ème."
+        };
+        context.AcademicPrograms.Add(academicProgram);
+
         var classes = new[]
         {
-            new SchoolClass { Name = "6ème A", Level = "6ème", AcademicYear = academicYear, Capacity = 35, HomeroomTeacher = teachers[0] },
-            new SchoolClass { Name = "5ème B", Level = "5ème", AcademicYear = academicYear, Capacity = 35, HomeroomTeacher = teachers[1] },
+            new SchoolClass { Name = "6ème A", Level = "6ème", AcademicYear = academicYear, Program = academicProgram, Capacity = 35, HomeroomTeacher = teachers[0] },
+            new SchoolClass { Name = "5ème B", Level = "5ème", AcademicYear = academicYear, Program = academicProgram, Capacity = 35, HomeroomTeacher = teachers[1] },
         };
         context.Classes.AddRange(classes);
+
+        var rooms = new[]
+        {
+            new Room { Name = "Salle 101", Capacity = 40, Building = "Bâtiment A" },
+            new Room { Name = "Salle 102", Capacity = 40, Building = "Bâtiment A" },
+        };
+        context.Rooms.AddRange(rooms);
+
+        var courses = subjects.Select(s => new Course
+        {
+            Name = s.Name,
+            Code = s.Name[..Math.Min(3, s.Name.Length)].ToUpperInvariant(),
+            Program = academicProgram,
+            Subject = s
+        }).ToList();
+        context.Courses.AddRange(courses);
+
+        foreach (var course in courses)
+        {
+            context.Topics.Add(new Topic { Course = course, Name = $"Introduction à {course.Name}", Order = 1 });
+            context.Topics.Add(new Topic { Course = course, Name = $"Approfondissement — {course.Name}", Order = 2 });
+        }
+
+        var scheduleDays = new[] { DayOfWeek.Monday, DayOfWeek.Tuesday, DayOfWeek.Wednesday, DayOfWeek.Thursday, DayOfWeek.Friday };
+        for (var i = 0; i < courses.Count; i++)
+        {
+            var course = courses[i];
+            var teacher = i % 2 == 0 ? teachers[0] : teachers[1];
+            context.CourseSchedules.Add(new CourseSchedule
+            {
+                Course = course,
+                Room = rooms[i % rooms.Length],
+                Teacher = teacher,
+                Class = classes[i % classes.Length],
+                AcademicTerm = academicTerms[0],
+                DayOfWeek = scheduleDays[i % scheduleDays.Length],
+                StartTime = new TimeOnly(8 + (i % 4) * 2, 0),
+                EndTime = new TimeOnly(9 + (i % 4) * 2, 0)
+            });
+        }
+
+        var gradingScale = new GradingScale { Name = "Barème standard", IsDefault = true };
+        context.GradingScales.Add(gradingScale);
+        context.GradingScaleIntervals.AddRange(
+            new GradingScaleInterval { GradingScale = gradingScale, Grade = "A", MinScore = 16, MaxScore = 20 },
+            new GradingScaleInterval { GradingScale = gradingScale, Grade = "B", MinScore = 14, MaxScore = 15.99m },
+            new GradingScaleInterval { GradingScale = gradingScale, Grade = "C", MinScore = 12, MaxScore = 13.99m },
+            new GradingScaleInterval { GradingScale = gradingScale, Grade = "D", MinScore = 10, MaxScore = 11.99m },
+            new GradingScaleInterval { GradingScale = gradingScale, Grade = "E", MinScore = 0, MaxScore = 9.99m });
+
+        var assessmentGroups = new[]
+        {
+            new AssessmentGroup { Name = "Devoirs", Weightage = 40, AcademicTerm = academicTerms[0] },
+            new AssessmentGroup { Name = "Compositions", Weightage = 60, AcademicTerm = academicTerms[0] },
+        };
+        context.AssessmentGroups.AddRange(assessmentGroups);
+
+        var mathsCourse = courses.First(c => c.Name == "Mathématiques");
+        var assessmentPlan = new AssessmentPlan
+        {
+            Name = "Composition de Mathématiques — Trimestre 1",
+            Course = mathsCourse,
+            Class = classes[0],
+            AcademicTerm = academicTerms[0],
+            AssessmentGroup = assessmentGroups[1],
+            GradingScale = gradingScale,
+            MaxScore = 20,
+            PlannedDate = DateTime.UtcNow.AddDays(-11)
+        };
+        context.AssessmentPlans.Add(assessmentPlan);
+        context.AssessmentCriteria.AddRange(
+            new AssessmentCriteria { AssessmentPlan = assessmentPlan, Name = "Écrit", MaxScore = 15 },
+            new AssessmentCriteria { AssessmentPlan = assessmentPlan, Name = "Oral", MaxScore = 5 });
+
+        var studentCategories = new[]
+        {
+            new StudentCategory { Name = "Standard", Description = "Scolarité classique" },
+            new StudentCategory { Name = "Boursier", Description = "Bénéficie d'une bourse d'études" },
+        };
+        context.StudentCategories.AddRange(studentCategories);
+
+        var studentBatch = new StudentBatch
+        {
+            Name = "Promotion 2025-2026",
+            AcademicYear = academicYear,
+            StartDate = academicYear.StartDate,
+            EndDate = academicYear.EndDate
+        };
+        context.StudentBatches.Add(studentBatch);
 
         var studentNames = new (string First, string Last, Gender Gender)[]
         {
@@ -101,10 +198,50 @@ public static class DbSeeder
                 Gender = gender,
                 DateOfBirth = new DateTime(2013, 1, 1, 0, 0, 0, DateTimeKind.Utc).AddDays(i * 17),
                 EnrollmentDate = DateTime.UtcNow.AddMonths(-6),
-                Class = classes[i % 2]
+                Class = classes[i % 2],
+                StudentCategory = studentCategories[i % 2],
+                StudentBatch = studentBatch
             });
         }
         context.Students.AddRange(students);
+
+        context.ProgramEnrollments.AddRange(students.Select(s => new ProgramEnrollment
+        {
+            Student = s,
+            Program = academicProgram,
+            AcademicYear = academicYear,
+            EnrollmentDate = s.EnrollmentDate,
+            Status = EnrollmentStatus.Active
+        }));
+
+        var studentGroup = new StudentGroup
+        {
+            Name = "Club Sciences",
+            GroupType = "Club",
+            AcademicYear = academicYear,
+            MaxSize = 20
+        };
+        context.StudentGroups.Add(studentGroup);
+        context.StudentGroupMembers.AddRange(
+            students.Take(3).Select(s => new StudentGroupMember { StudentGroup = studentGroup, Student = s }));
+
+        context.StudentLogs.AddRange(
+            new StudentLog
+            {
+                Student = students[0],
+                LogDate = DateTime.UtcNow.AddDays(-5),
+                LogType = "Académique",
+                Description = "Excellent travail lors du dernier devoir de mathématiques.",
+                RecordedByUserId = director.Id
+            },
+            new StudentLog
+            {
+                Student = students[1],
+                LogDate = DateTime.UtcNow.AddDays(-2),
+                LogType = "Comportement",
+                Description = "A aidé un camarade en difficulté pendant le cours de sciences.",
+                RecordedByUserId = director.Id
+            });
 
         var parentUsers = students.Select((s, i) => new User
         {
@@ -125,6 +262,17 @@ public static class DbSeeder
                 Relationship = "Parent"
             });
         }
+
+        var studentPortalUser = new User
+        {
+            Email = "eleve1@ecole.mg",
+            PasswordHash = PasswordHasher.Hash("Password123!"),
+            FirstName = students[0].FirstName,
+            LastName = students[0].LastName,
+            Role = UserRole.Student
+        };
+        context.Users.Add(studentPortalUser);
+        students[0].User = studentPortalUser;
 
         var random = new Random(42);
         const string term = "Trimestre 1";
@@ -178,6 +326,125 @@ public static class DbSeeder
                 RecordedByUserId = director.Id
             });
         }
+
+        context.StudentLeaveApplications.AddRange(
+            new StudentLeaveApplication
+            {
+                Student = students[2],
+                StartDate = DateTime.UtcNow.Date.AddDays(3),
+                EndDate = DateTime.UtcNow.Date.AddDays(5),
+                Reason = "Consultation médicale programmée.",
+                Status = LeaveApplicationStatus.Pending,
+                RequestedByUserId = parentUsers[2].Id
+            },
+            new StudentLeaveApplication
+            {
+                Student = students[4],
+                StartDate = DateTime.UtcNow.Date.AddDays(-10),
+                EndDate = DateTime.UtcNow.Date.AddDays(-8),
+                Reason = "Voyage familial.",
+                Status = LeaveApplicationStatus.Approved,
+                RequestedByUserId = parentUsers[4].Id,
+                DecisionDate = DateTime.UtcNow.AddDays(-12),
+                DecisionNotes = "Autorisé."
+            });
+
+        var feeCategories = new[]
+        {
+            new FeeCategory { Name = "Scolarité", Description = "Frais de scolarité de base" },
+            new FeeCategory { Name = "Cantine", Description = "Restauration scolaire" },
+            new FeeCategory { Name = "Transport", Description = "Ramassage scolaire" },
+        };
+        context.FeeCategories.AddRange(feeCategories);
+
+        var feeStructure = new FeeStructure { Name = "Frais standard 2025-2026", AcademicYear = academicYear };
+        context.FeeStructures.Add(feeStructure);
+        context.FeeStructureItems.AddRange(
+            new FeeStructureItem { FeeStructure = feeStructure, FeeCategory = feeCategories[0], Amount = 200000 },
+            new FeeStructureItem { FeeStructure = feeStructure, FeeCategory = feeCategories[1], Amount = 40000 },
+            new FeeStructureItem { FeeStructure = feeStructure, FeeCategory = feeCategories[2], Amount = 10000 });
+
+        var feeSchedule = new FeeSchedule
+        {
+            FeeStructure = feeStructure,
+            AcademicTerm = academicTerms[0],
+            DueDate = academicTerms[0].StartDate.AddDays(30)
+        };
+        context.FeeSchedules.Add(feeSchedule);
+
+        var paidInvoice = new Invoice
+        {
+            Student = students[0],
+            FeeSchedule = feeSchedule,
+            InvoiceNumber = $"FAC-2025T1-{students[0].EnrollmentNumber[^3..]}",
+            TotalAmount = 250000,
+            DueDate = feeSchedule.DueDate,
+            Status = PaymentStatus.Paye
+        };
+        var pendingInvoice = new Invoice
+        {
+            Student = students[1],
+            FeeSchedule = feeSchedule,
+            InvoiceNumber = $"FAC-2025T1-{students[1].EnrollmentNumber[^3..]}",
+            TotalAmount = 250000,
+            DueDate = feeSchedule.DueDate,
+            Status = PaymentStatus.EnAttente
+        };
+        context.Invoices.AddRange(paidInvoice, pendingInvoice);
+
+        context.Payments.Add(new Payment
+        {
+            Student = students[0],
+            Invoice = paidInvoice,
+            Description = "Frais standard 2025-2026 — Trimestre 1",
+            Amount = 250000,
+            AcademicYear = "2025-2026",
+            Term = term,
+            DueDate = DateTime.UtcNow,
+            PaidAt = DateTime.UtcNow.AddDays(-3),
+            Status = PaymentStatus.Paye,
+            Method = "Mobile Money"
+        });
+
+        context.StudentApplicants.AddRange(
+            new StudentApplicant
+            {
+                FirstName = "Hery",
+                LastName = "Andriamanjato",
+                DateOfBirth = new DateTime(2014, 3, 12, 0, 0, 0, DateTimeKind.Utc),
+                Gender = Gender.Masculin,
+                GuardianName = "Parent d'Hery",
+                GuardianPhone = "034 00 000 01",
+                LevelAppliedFor = "6ème",
+                AcademicYear = academicYear,
+                Status = AdmissionStatus.Submitted
+            },
+            new StudentApplicant
+            {
+                FirstName = "Voninkazo",
+                LastName = "Rasolofo",
+                DateOfBirth = new DateTime(2013, 7, 22, 0, 0, 0, DateTimeKind.Utc),
+                Gender = Gender.Feminin,
+                GuardianName = "Parent de Voninkazo",
+                GuardianPhone = "034 00 000 02",
+                LevelAppliedFor = "5ème",
+                AcademicYear = academicYear,
+                Status = AdmissionStatus.UnderReview
+            },
+            new StudentApplicant
+            {
+                FirstName = "Tahina",
+                LastName = "Rakotoson",
+                DateOfBirth = new DateTime(2014, 1, 5, 0, 0, 0, DateTimeKind.Utc),
+                Gender = Gender.Masculin,
+                GuardianName = "Parent de Tahina",
+                GuardianPhone = "034 00 000 03",
+                LevelAppliedFor = "6ème",
+                AcademicYear = academicYear,
+                Status = AdmissionStatus.Rejected,
+                DecisionDate = DateTime.UtcNow.AddDays(-3),
+                DecisionNotes = "Places déjà complètes pour ce niveau."
+            });
 
         await context.SaveChangesAsync();
     }

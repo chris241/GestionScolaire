@@ -22,6 +22,42 @@ namespace GestionScolaire.Infrastructure.Persistence.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("GestionScolaire.Domain.Entities.AcademicProgram", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Description")
+                        .HasColumnType("text");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("character varying(150)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Code")
+                        .IsUnique();
+
+                    b.ToTable("AcademicPrograms", (string)null);
+                });
+
             modelBuilder.Entity("GestionScolaire.Domain.Entities.AcademicTerm", b =>
                 {
                     b.Property<Guid>("Id")
@@ -93,6 +129,120 @@ namespace GestionScolaire.Infrastructure.Persistence.Migrations
                     b.ToTable("AcademicYears", (string)null);
                 });
 
+            modelBuilder.Entity("GestionScolaire.Domain.Entities.AssessmentCriteria", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("AssessmentPlanId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<decimal>("MaxScore")
+                        .HasColumnType("decimal(6,2)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AssessmentPlanId");
+
+                    b.ToTable("AssessmentCriteria", (string)null);
+                });
+
+            modelBuilder.Entity("GestionScolaire.Domain.Entities.AssessmentGroup", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("AcademicTermId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<decimal>("Weightage")
+                        .HasColumnType("decimal(5,2)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AcademicTermId", "Name")
+                        .IsUnique();
+
+                    b.ToTable("AssessmentGroups", (string)null);
+                });
+
+            modelBuilder.Entity("GestionScolaire.Domain.Entities.AssessmentPlan", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("AcademicTermId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("AssessmentGroupId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ClassId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("CourseId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("GradingScaleId")
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("MaxScore")
+                        .HasColumnType("decimal(6,2)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("character varying(150)");
+
+                    b.Property<DateTime>("PlannedDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AcademicTermId");
+
+                    b.HasIndex("AssessmentGroupId");
+
+                    b.HasIndex("ClassId");
+
+                    b.HasIndex("CourseId");
+
+                    b.HasIndex("GradingScaleId");
+
+                    b.ToTable("AssessmentPlans", (string)null);
+                });
+
             modelBuilder.Entity("GestionScolaire.Domain.Entities.Attendance", b =>
                 {
                     b.Property<Guid>("Id")
@@ -134,6 +284,97 @@ namespace GestionScolaire.Infrastructure.Persistence.Migrations
                     b.ToTable("Attendances", (string)null);
                 });
 
+            modelBuilder.Entity("GestionScolaire.Domain.Entities.Course", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Code")
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Description")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("character varying(150)");
+
+                    b.Property<Guid>("ProgramId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("SubjectId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProgramId");
+
+                    b.HasIndex("SubjectId");
+
+                    b.ToTable("Courses", (string)null);
+                });
+
+            modelBuilder.Entity("GestionScolaire.Domain.Entities.CourseSchedule", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("AcademicTermId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("ClassId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("CourseId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("DayOfWeek")
+                        .HasColumnType("integer");
+
+                    b.Property<TimeOnly>("EndTime")
+                        .HasColumnType("time without time zone");
+
+                    b.Property<Guid>("RoomId")
+                        .HasColumnType("uuid");
+
+                    b.Property<TimeOnly>("StartTime")
+                        .HasColumnType("time without time zone");
+
+                    b.Property<Guid>("TeacherId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AcademicTermId");
+
+                    b.HasIndex("ClassId");
+
+                    b.HasIndex("CourseId");
+
+                    b.HasIndex("TeacherId");
+
+                    b.HasIndex("RoomId", "AcademicTermId", "DayOfWeek", "StartTime")
+                        .IsUnique();
+
+                    b.ToTable("CourseSchedules", (string)null);
+                });
+
             modelBuilder.Entity("GestionScolaire.Domain.Entities.EducationSettings", b =>
                 {
                     b.Property<Guid>("Id")
@@ -167,10 +408,133 @@ namespace GestionScolaire.Infrastructure.Persistence.Migrations
                     b.ToTable("EducationSettings", (string)null);
                 });
 
+            modelBuilder.Entity("GestionScolaire.Domain.Entities.FeeCategory", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Description")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Name")
+                        .IsUnique();
+
+                    b.ToTable("FeeCategories", (string)null);
+                });
+
+            modelBuilder.Entity("GestionScolaire.Domain.Entities.FeeSchedule", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("AcademicTermId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("DueDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("FeeStructureId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AcademicTermId");
+
+                    b.HasIndex("FeeStructureId");
+
+                    b.ToTable("FeeSchedules", (string)null);
+                });
+
+            modelBuilder.Entity("GestionScolaire.Domain.Entities.FeeStructure", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("AcademicYearId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("character varying(150)");
+
+                    b.Property<Guid?>("ProgramId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AcademicYearId");
+
+                    b.HasIndex("ProgramId");
+
+                    b.ToTable("FeeStructures", (string)null);
+                });
+
+            modelBuilder.Entity("GestionScolaire.Domain.Entities.FeeStructureItem", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("Amount")
+                        .HasColumnType("decimal(12,2)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("FeeCategoryId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("FeeStructureId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("FeeCategoryId");
+
+                    b.HasIndex("FeeStructureId");
+
+                    b.ToTable("FeeStructureItems", (string)null);
+                });
+
             modelBuilder.Entity("GestionScolaire.Domain.Entities.Grade", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("AssessmentPlanId")
                         .HasColumnType("uuid");
 
                     b.Property<Guid>("ClassId")
@@ -218,6 +582,8 @@ namespace GestionScolaire.Infrastructure.Persistence.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("AssessmentPlanId");
+
                     b.HasIndex("ClassId");
 
                     b.HasIndex("SubjectId");
@@ -227,6 +593,111 @@ namespace GestionScolaire.Infrastructure.Persistence.Migrations
                     b.HasIndex("StudentId", "SubjectId", "Term");
 
                     b.ToTable("Grades", (string)null);
+                });
+
+            modelBuilder.Entity("GestionScolaire.Domain.Entities.GradingScale", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsDefault")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("GradingScales", (string)null);
+                });
+
+            modelBuilder.Entity("GestionScolaire.Domain.Entities.GradingScaleInterval", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Grade")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)");
+
+                    b.Property<Guid>("GradingScaleId")
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("MaxScore")
+                        .HasColumnType("decimal(6,2)");
+
+                    b.Property<decimal>("MinScore")
+                        .HasColumnType("decimal(6,2)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("GradingScaleId");
+
+                    b.ToTable("GradingScaleIntervals", (string)null);
+                });
+
+            modelBuilder.Entity("GestionScolaire.Domain.Entities.Invoice", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("DueDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("FeeScheduleId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("GeneratedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("InvoiceNumber")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<Guid>("StudentId")
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("TotalAmount")
+                        .HasColumnType("decimal(12,2)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("FeeScheduleId");
+
+                    b.HasIndex("StudentId", "FeeScheduleId")
+                        .IsUnique();
+
+                    b.ToTable("Invoices", (string)null);
                 });
 
             modelBuilder.Entity("GestionScolaire.Domain.Entities.Payment", b =>
@@ -253,6 +724,9 @@ namespace GestionScolaire.Infrastructure.Persistence.Migrations
 
                     b.Property<DateTime>("DueDate")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("InvoiceId")
+                        .HasColumnType("uuid");
 
                     b.Property<string>("InvoiceNumber")
                         .HasMaxLength(50)
@@ -283,11 +757,86 @@ namespace GestionScolaire.Infrastructure.Persistence.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("InvoiceId");
+
                     b.HasIndex("Status");
 
                     b.HasIndex("StudentId");
 
                     b.ToTable("Payments", (string)null);
+                });
+
+            modelBuilder.Entity("GestionScolaire.Domain.Entities.ProgramEnrollment", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("AcademicYearId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("EnrollmentDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("ProgramId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<Guid>("StudentId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AcademicYearId");
+
+                    b.HasIndex("ProgramId");
+
+                    b.HasIndex("StudentId", "ProgramId", "AcademicYearId")
+                        .IsUnique();
+
+                    b.ToTable("ProgramEnrollments", (string)null);
+                });
+
+            modelBuilder.Entity("GestionScolaire.Domain.Entities.Room", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Building")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<int>("Capacity")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Name")
+                        .IsUnique();
+
+                    b.ToTable("Rooms", (string)null);
                 });
 
             modelBuilder.Entity("GestionScolaire.Domain.Entities.SchoolClass", b =>
@@ -318,6 +867,9 @@ namespace GestionScolaire.Infrastructure.Persistence.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
 
+                    b.Property<Guid>("ProgramId")
+                        .HasColumnType("uuid");
+
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -326,6 +878,8 @@ namespace GestionScolaire.Infrastructure.Persistence.Migrations
                     b.HasIndex("AcademicYearId");
 
                     b.HasIndex("HomeroomTeacherId");
+
+                    b.HasIndex("ProgramId");
 
                     b.ToTable("Classes", (string)null);
                 });
@@ -374,8 +928,17 @@ namespace GestionScolaire.Infrastructure.Persistence.Migrations
                     b.Property<string>("PhotoUrl")
                         .HasColumnType("text");
 
+                    b.Property<Guid?>("StudentBatchId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("StudentCategoryId")
+                        .HasColumnType("uuid");
+
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("UserId")
+                        .HasColumnType("uuid");
 
                     b.HasKey("Id");
 
@@ -384,7 +947,316 @@ namespace GestionScolaire.Infrastructure.Persistence.Migrations
                     b.HasIndex("EnrollmentNumber")
                         .IsUnique();
 
+                    b.HasIndex("StudentBatchId");
+
+                    b.HasIndex("StudentCategoryId");
+
+                    b.HasIndex("UserId")
+                        .IsUnique()
+                        .HasFilter("\"UserId\" IS NOT NULL");
+
                     b.ToTable("Students", (string)null);
+                });
+
+            modelBuilder.Entity("GestionScolaire.Domain.Entities.StudentApplicant", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("AcademicYearId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("AppliedDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("ConvertedStudentId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("DateOfBirth")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("DecisionDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("DecisionNotes")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Email")
+                        .HasColumnType("text");
+
+                    b.Property<string>("FirstName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("Gender")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<string>("GuardianEmail")
+                        .HasColumnType("text");
+
+                    b.Property<string>("GuardianName")
+                        .HasColumnType("text");
+
+                    b.Property<string>("GuardianPhone")
+                        .HasColumnType("text");
+
+                    b.Property<string>("LastName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("LevelAppliedFor")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<string>("Phone")
+                        .HasColumnType("text");
+
+                    b.Property<Guid?>("ProgramId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AcademicYearId");
+
+                    b.HasIndex("ConvertedStudentId");
+
+                    b.HasIndex("ProgramId");
+
+                    b.HasIndex("Status");
+
+                    b.ToTable("StudentApplicants", (string)null);
+                });
+
+            modelBuilder.Entity("GestionScolaire.Domain.Entities.StudentBatch", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("AcademicYearId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Description")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime?>("EndDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<DateTime>("StartDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AcademicYearId");
+
+                    b.ToTable("StudentBatches", (string)null);
+                });
+
+            modelBuilder.Entity("GestionScolaire.Domain.Entities.StudentCategory", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Description")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Name")
+                        .IsUnique();
+
+                    b.ToTable("StudentCategories", (string)null);
+                });
+
+            modelBuilder.Entity("GestionScolaire.Domain.Entities.StudentGroup", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("AcademicYearId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("ClassId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("GroupType")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<int?>("MaxSize")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AcademicYearId");
+
+                    b.HasIndex("ClassId");
+
+                    b.ToTable("StudentGroups", (string)null);
+                });
+
+            modelBuilder.Entity("GestionScolaire.Domain.Entities.StudentGroupMember", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("StudentGroupId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("StudentId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("StudentId");
+
+                    b.HasIndex("StudentGroupId", "StudentId")
+                        .IsUnique();
+
+                    b.ToTable("StudentGroupMembers", (string)null);
+                });
+
+            modelBuilder.Entity("GestionScolaire.Domain.Entities.StudentLeaveApplication", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("DecisionDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("DecisionNotes")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("EndDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("RequestedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("StartDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<Guid>("StudentId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("StudentId", "Status");
+
+                    b.ToTable("StudentLeaveApplications", (string)null);
+                });
+
+            modelBuilder.Entity("GestionScolaire.Domain.Entities.StudentLog", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("LogDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("LogType")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<Guid>("RecordedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("StudentId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("StudentId", "LogDate");
+
+                    b.ToTable("StudentLogs", (string)null);
                 });
 
             modelBuilder.Entity("GestionScolaire.Domain.Entities.StudentParent", b =>
@@ -479,6 +1351,39 @@ namespace GestionScolaire.Infrastructure.Persistence.Migrations
                     b.ToTable("Teachers", (string)null);
                 });
 
+            modelBuilder.Entity("GestionScolaire.Domain.Entities.Topic", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("CourseId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Description")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("character varying(150)");
+
+                    b.Property<int>("Order")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CourseId", "Order");
+
+                    b.ToTable("Topics", (string)null);
+                });
+
             modelBuilder.Entity("GestionScolaire.Domain.Entities.User", b =>
                 {
                     b.Property<Guid>("Id")
@@ -547,6 +1452,70 @@ namespace GestionScolaire.Infrastructure.Persistence.Migrations
                     b.Navigation("AcademicYear");
                 });
 
+            modelBuilder.Entity("GestionScolaire.Domain.Entities.AssessmentCriteria", b =>
+                {
+                    b.HasOne("GestionScolaire.Domain.Entities.AssessmentPlan", "AssessmentPlan")
+                        .WithMany("Criteria")
+                        .HasForeignKey("AssessmentPlanId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("AssessmentPlan");
+                });
+
+            modelBuilder.Entity("GestionScolaire.Domain.Entities.AssessmentGroup", b =>
+                {
+                    b.HasOne("GestionScolaire.Domain.Entities.AcademicTerm", "AcademicTerm")
+                        .WithMany()
+                        .HasForeignKey("AcademicTermId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("AcademicTerm");
+                });
+
+            modelBuilder.Entity("GestionScolaire.Domain.Entities.AssessmentPlan", b =>
+                {
+                    b.HasOne("GestionScolaire.Domain.Entities.AcademicTerm", "AcademicTerm")
+                        .WithMany()
+                        .HasForeignKey("AcademicTermId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("GestionScolaire.Domain.Entities.AssessmentGroup", "AssessmentGroup")
+                        .WithMany("Plans")
+                        .HasForeignKey("AssessmentGroupId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("GestionScolaire.Domain.Entities.SchoolClass", "Class")
+                        .WithMany()
+                        .HasForeignKey("ClassId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("GestionScolaire.Domain.Entities.Course", "Course")
+                        .WithMany()
+                        .HasForeignKey("CourseId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("GestionScolaire.Domain.Entities.GradingScale", "GradingScale")
+                        .WithMany()
+                        .HasForeignKey("GradingScaleId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("AcademicTerm");
+
+                    b.Navigation("AssessmentGroup");
+
+                    b.Navigation("Class");
+
+                    b.Navigation("Course");
+
+                    b.Navigation("GradingScale");
+                });
+
             modelBuilder.Entity("GestionScolaire.Domain.Entities.Attendance", b =>
                 {
                     b.HasOne("GestionScolaire.Domain.Entities.SchoolClass", "Class")
@@ -566,8 +1535,130 @@ namespace GestionScolaire.Infrastructure.Persistence.Migrations
                     b.Navigation("Student");
                 });
 
+            modelBuilder.Entity("GestionScolaire.Domain.Entities.Course", b =>
+                {
+                    b.HasOne("GestionScolaire.Domain.Entities.AcademicProgram", "Program")
+                        .WithMany("Courses")
+                        .HasForeignKey("ProgramId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("GestionScolaire.Domain.Entities.Subject", "Subject")
+                        .WithMany()
+                        .HasForeignKey("SubjectId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Program");
+
+                    b.Navigation("Subject");
+                });
+
+            modelBuilder.Entity("GestionScolaire.Domain.Entities.CourseSchedule", b =>
+                {
+                    b.HasOne("GestionScolaire.Domain.Entities.AcademicTerm", "AcademicTerm")
+                        .WithMany()
+                        .HasForeignKey("AcademicTermId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("GestionScolaire.Domain.Entities.SchoolClass", "Class")
+                        .WithMany()
+                        .HasForeignKey("ClassId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("GestionScolaire.Domain.Entities.Course", "Course")
+                        .WithMany("Schedules")
+                        .HasForeignKey("CourseId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("GestionScolaire.Domain.Entities.Room", "Room")
+                        .WithMany("Schedules")
+                        .HasForeignKey("RoomId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("GestionScolaire.Domain.Entities.Teacher", "Teacher")
+                        .WithMany()
+                        .HasForeignKey("TeacherId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("AcademicTerm");
+
+                    b.Navigation("Class");
+
+                    b.Navigation("Course");
+
+                    b.Navigation("Room");
+
+                    b.Navigation("Teacher");
+                });
+
+            modelBuilder.Entity("GestionScolaire.Domain.Entities.FeeSchedule", b =>
+                {
+                    b.HasOne("GestionScolaire.Domain.Entities.AcademicTerm", "AcademicTerm")
+                        .WithMany()
+                        .HasForeignKey("AcademicTermId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("GestionScolaire.Domain.Entities.FeeStructure", "FeeStructure")
+                        .WithMany("Schedules")
+                        .HasForeignKey("FeeStructureId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("AcademicTerm");
+
+                    b.Navigation("FeeStructure");
+                });
+
+            modelBuilder.Entity("GestionScolaire.Domain.Entities.FeeStructure", b =>
+                {
+                    b.HasOne("GestionScolaire.Domain.Entities.AcademicYear", "AcademicYear")
+                        .WithMany()
+                        .HasForeignKey("AcademicYearId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("GestionScolaire.Domain.Entities.AcademicProgram", "Program")
+                        .WithMany()
+                        .HasForeignKey("ProgramId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("AcademicYear");
+
+                    b.Navigation("Program");
+                });
+
+            modelBuilder.Entity("GestionScolaire.Domain.Entities.FeeStructureItem", b =>
+                {
+                    b.HasOne("GestionScolaire.Domain.Entities.FeeCategory", "FeeCategory")
+                        .WithMany()
+                        .HasForeignKey("FeeCategoryId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("GestionScolaire.Domain.Entities.FeeStructure", "FeeStructure")
+                        .WithMany("Items")
+                        .HasForeignKey("FeeStructureId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("FeeCategory");
+
+                    b.Navigation("FeeStructure");
+                });
+
             modelBuilder.Entity("GestionScolaire.Domain.Entities.Grade", b =>
                 {
+                    b.HasOne("GestionScolaire.Domain.Entities.AssessmentPlan", "AssessmentPlan")
+                        .WithMany()
+                        .HasForeignKey("AssessmentPlanId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.HasOne("GestionScolaire.Domain.Entities.SchoolClass", "Class")
                         .WithMany("Grades")
                         .HasForeignKey("ClassId")
@@ -592,6 +1683,8 @@ namespace GestionScolaire.Infrastructure.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.Navigation("AssessmentPlan");
+
                     b.Navigation("Class");
 
                     b.Navigation("Student");
@@ -601,13 +1694,77 @@ namespace GestionScolaire.Infrastructure.Persistence.Migrations
                     b.Navigation("Teacher");
                 });
 
+            modelBuilder.Entity("GestionScolaire.Domain.Entities.GradingScaleInterval", b =>
+                {
+                    b.HasOne("GestionScolaire.Domain.Entities.GradingScale", "GradingScale")
+                        .WithMany("Intervals")
+                        .HasForeignKey("GradingScaleId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("GradingScale");
+                });
+
+            modelBuilder.Entity("GestionScolaire.Domain.Entities.Invoice", b =>
+                {
+                    b.HasOne("GestionScolaire.Domain.Entities.FeeSchedule", "FeeSchedule")
+                        .WithMany("Invoices")
+                        .HasForeignKey("FeeScheduleId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("GestionScolaire.Domain.Entities.Student", "Student")
+                        .WithMany()
+                        .HasForeignKey("StudentId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("FeeSchedule");
+
+                    b.Navigation("Student");
+                });
+
             modelBuilder.Entity("GestionScolaire.Domain.Entities.Payment", b =>
                 {
+                    b.HasOne("GestionScolaire.Domain.Entities.Invoice", "Invoice")
+                        .WithMany("Payments")
+                        .HasForeignKey("InvoiceId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.HasOne("GestionScolaire.Domain.Entities.Student", "Student")
                         .WithMany("Payments")
                         .HasForeignKey("StudentId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.Navigation("Invoice");
+
+                    b.Navigation("Student");
+                });
+
+            modelBuilder.Entity("GestionScolaire.Domain.Entities.ProgramEnrollment", b =>
+                {
+                    b.HasOne("GestionScolaire.Domain.Entities.AcademicYear", "AcademicYear")
+                        .WithMany()
+                        .HasForeignKey("AcademicYearId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("GestionScolaire.Domain.Entities.AcademicProgram", "Program")
+                        .WithMany()
+                        .HasForeignKey("ProgramId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("GestionScolaire.Domain.Entities.Student", "Student")
+                        .WithMany()
+                        .HasForeignKey("StudentId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("AcademicYear");
+
+                    b.Navigation("Program");
 
                     b.Navigation("Student");
                 });
@@ -625,9 +1782,17 @@ namespace GestionScolaire.Infrastructure.Persistence.Migrations
                         .HasForeignKey("HomeroomTeacherId")
                         .OnDelete(DeleteBehavior.SetNull);
 
+                    b.HasOne("GestionScolaire.Domain.Entities.AcademicProgram", "Program")
+                        .WithMany("Classes")
+                        .HasForeignKey("ProgramId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.Navigation("AcademicYear");
 
                     b.Navigation("HomeroomTeacher");
+
+                    b.Navigation("Program");
                 });
 
             modelBuilder.Entity("GestionScolaire.Domain.Entities.Student", b =>
@@ -638,7 +1803,123 @@ namespace GestionScolaire.Infrastructure.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.HasOne("GestionScolaire.Domain.Entities.StudentBatch", "StudentBatch")
+                        .WithMany("Students")
+                        .HasForeignKey("StudentBatchId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("GestionScolaire.Domain.Entities.StudentCategory", "StudentCategory")
+                        .WithMany("Students")
+                        .HasForeignKey("StudentCategoryId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("GestionScolaire.Domain.Entities.User", "User")
+                        .WithOne()
+                        .HasForeignKey("GestionScolaire.Domain.Entities.Student", "UserId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.Navigation("Class");
+
+                    b.Navigation("StudentBatch");
+
+                    b.Navigation("StudentCategory");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("GestionScolaire.Domain.Entities.StudentApplicant", b =>
+                {
+                    b.HasOne("GestionScolaire.Domain.Entities.AcademicYear", "AcademicYear")
+                        .WithMany()
+                        .HasForeignKey("AcademicYearId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("GestionScolaire.Domain.Entities.Student", "ConvertedStudent")
+                        .WithMany()
+                        .HasForeignKey("ConvertedStudentId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("GestionScolaire.Domain.Entities.AcademicProgram", "Program")
+                        .WithMany()
+                        .HasForeignKey("ProgramId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("AcademicYear");
+
+                    b.Navigation("ConvertedStudent");
+
+                    b.Navigation("Program");
+                });
+
+            modelBuilder.Entity("GestionScolaire.Domain.Entities.StudentBatch", b =>
+                {
+                    b.HasOne("GestionScolaire.Domain.Entities.AcademicYear", "AcademicYear")
+                        .WithMany()
+                        .HasForeignKey("AcademicYearId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("AcademicYear");
+                });
+
+            modelBuilder.Entity("GestionScolaire.Domain.Entities.StudentGroup", b =>
+                {
+                    b.HasOne("GestionScolaire.Domain.Entities.AcademicYear", "AcademicYear")
+                        .WithMany()
+                        .HasForeignKey("AcademicYearId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("GestionScolaire.Domain.Entities.SchoolClass", "Class")
+                        .WithMany()
+                        .HasForeignKey("ClassId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("AcademicYear");
+
+                    b.Navigation("Class");
+                });
+
+            modelBuilder.Entity("GestionScolaire.Domain.Entities.StudentGroupMember", b =>
+                {
+                    b.HasOne("GestionScolaire.Domain.Entities.StudentGroup", "StudentGroup")
+                        .WithMany("Members")
+                        .HasForeignKey("StudentGroupId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("GestionScolaire.Domain.Entities.Student", "Student")
+                        .WithMany("GroupMemberships")
+                        .HasForeignKey("StudentId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Student");
+
+                    b.Navigation("StudentGroup");
+                });
+
+            modelBuilder.Entity("GestionScolaire.Domain.Entities.StudentLeaveApplication", b =>
+                {
+                    b.HasOne("GestionScolaire.Domain.Entities.Student", "Student")
+                        .WithMany()
+                        .HasForeignKey("StudentId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Student");
+                });
+
+            modelBuilder.Entity("GestionScolaire.Domain.Entities.StudentLog", b =>
+                {
+                    b.HasOne("GestionScolaire.Domain.Entities.Student", "Student")
+                        .WithMany("Logs")
+                        .HasForeignKey("StudentId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Student");
                 });
 
             modelBuilder.Entity("GestionScolaire.Domain.Entities.StudentParent", b =>
@@ -671,11 +1952,73 @@ namespace GestionScolaire.Infrastructure.Persistence.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("GestionScolaire.Domain.Entities.Topic", b =>
+                {
+                    b.HasOne("GestionScolaire.Domain.Entities.Course", "Course")
+                        .WithMany("Topics")
+                        .HasForeignKey("CourseId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Course");
+                });
+
+            modelBuilder.Entity("GestionScolaire.Domain.Entities.AcademicProgram", b =>
+                {
+                    b.Navigation("Classes");
+
+                    b.Navigation("Courses");
+                });
+
             modelBuilder.Entity("GestionScolaire.Domain.Entities.AcademicYear", b =>
                 {
                     b.Navigation("Classes");
 
                     b.Navigation("Terms");
+                });
+
+            modelBuilder.Entity("GestionScolaire.Domain.Entities.AssessmentGroup", b =>
+                {
+                    b.Navigation("Plans");
+                });
+
+            modelBuilder.Entity("GestionScolaire.Domain.Entities.AssessmentPlan", b =>
+                {
+                    b.Navigation("Criteria");
+                });
+
+            modelBuilder.Entity("GestionScolaire.Domain.Entities.Course", b =>
+                {
+                    b.Navigation("Schedules");
+
+                    b.Navigation("Topics");
+                });
+
+            modelBuilder.Entity("GestionScolaire.Domain.Entities.FeeSchedule", b =>
+                {
+                    b.Navigation("Invoices");
+                });
+
+            modelBuilder.Entity("GestionScolaire.Domain.Entities.FeeStructure", b =>
+                {
+                    b.Navigation("Items");
+
+                    b.Navigation("Schedules");
+                });
+
+            modelBuilder.Entity("GestionScolaire.Domain.Entities.GradingScale", b =>
+                {
+                    b.Navigation("Intervals");
+                });
+
+            modelBuilder.Entity("GestionScolaire.Domain.Entities.Invoice", b =>
+                {
+                    b.Navigation("Payments");
+                });
+
+            modelBuilder.Entity("GestionScolaire.Domain.Entities.Room", b =>
+                {
+                    b.Navigation("Schedules");
                 });
 
             modelBuilder.Entity("GestionScolaire.Domain.Entities.SchoolClass", b =>
@@ -693,9 +2036,28 @@ namespace GestionScolaire.Infrastructure.Persistence.Migrations
 
                     b.Navigation("Grades");
 
+                    b.Navigation("GroupMemberships");
+
+                    b.Navigation("Logs");
+
                     b.Navigation("Parents");
 
                     b.Navigation("Payments");
+                });
+
+            modelBuilder.Entity("GestionScolaire.Domain.Entities.StudentBatch", b =>
+                {
+                    b.Navigation("Students");
+                });
+
+            modelBuilder.Entity("GestionScolaire.Domain.Entities.StudentCategory", b =>
+                {
+                    b.Navigation("Students");
+                });
+
+            modelBuilder.Entity("GestionScolaire.Domain.Entities.StudentGroup", b =>
+                {
+                    b.Navigation("Members");
                 });
 
             modelBuilder.Entity("GestionScolaire.Domain.Entities.Subject", b =>

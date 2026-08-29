@@ -11,6 +11,9 @@ public class SchoolClass : BaseEntity
     public Guid AcademicYearId { get; set; }
     public AcademicYear AcademicYear { get; set; } = null!;
 
+    public Guid ProgramId { get; set; }
+    public AcademicProgram Program { get; set; } = null!;
+
     public Guid? HomeroomTeacherId { get; set; }
     public Teacher? HomeroomTeacher { get; set; }
 

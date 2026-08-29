@@ -27,6 +27,11 @@ public class GradeConfiguration : IEntityTypeConfiguration<Grade>
             .HasForeignKey(g => g.ClassId)
             .OnDelete(DeleteBehavior.Restrict);
 
+        builder.HasOne(g => g.AssessmentPlan)
+            .WithMany()
+            .HasForeignKey(g => g.AssessmentPlanId)
+            .OnDelete(DeleteBehavior.SetNull);
+
         builder.HasIndex(g => new { g.StudentId, g.SubjectId, g.Term });
     }
 }

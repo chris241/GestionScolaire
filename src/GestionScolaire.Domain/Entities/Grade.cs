@@ -24,4 +24,8 @@ public class Grade : BaseEntity
     public string Term { get; set; } = string.Empty;
     public DateTime EvaluatedAt { get; set; } = DateTime.UtcNow;
     public string? Comment { get; set; }
+
+    /// Rattachement optionnel à un plan d'évaluation ; les notes existantes restent non rattachées (null).
+    public Guid? AssessmentPlanId { get; set; }
+    public AssessmentPlan? AssessmentPlan { get; set; }
 }

@@ -3,8 +3,11 @@ import { Download } from 'lucide-react';
 import { fetchStudents } from '../api/students';
 import { fetchSubjects } from '../api/subjects';
 import { fetchStudentGrades, fetchStudentAverage, createGrade, downloadBulletin } from '../api/grades';
-import type { Student, Subject, Grade, StudentGeneralAverage } from '../types';
+import { fetchStudentLogs, createStudentLog } from '../api/studentLogs';
+import type { Student, Subject, Grade, StudentGeneralAverage, StudentLog } from '../types';
 import { useAuth } from '../lib/AuthContext';
+
+const LOG_TYPES = ['Académique', 'Comportement', 'Médical', 'Général'];
 
 const EVALUATION_TYPES = [
   { value: 1, label: 'Devoir' },
@@ -30,6 +33,10 @@ export function Grades() {
   const [form, setForm] = useState({ subjectId: '', score: '', maxScore: '20', coefficient: '1', type: '1' });
   const [submitting, setSubmitting] = useState(false);
 
+  const [logs, setLogs] = useState<StudentLog[]>([]);
+  const [logForm, setLogForm] = useState({ logType: LOG_TYPES[0], description: '' });
+  const [submittingLog, setSubmittingLog] = useState(false);
+
   useEffect(() => {
     Promise.all([fetchStudents(), fetchSubjects()])
       .then(([studentsData, subjectsData]) => {
@@ -45,11 +52,12 @@ export function Grades() {
     let cancelled = false;
 
     setLoadingGrades(true);
-    Promise.all([fetchStudentGrades(selectedStudentId), fetchStudentAverage(selectedStudentId)])
-      .then(([gradesData, averageData]) => {
+    Promise.all([fetchStudentGrades(selectedStudentId), fetchStudentAverage(selectedStudentId), fetchStudentLogs(selectedStudentId)])
+      .then(([gradesData, averageData, logsData]) => {
         if (cancelled) return;
         setGrades(gradesData);
         setAverage(averageData);
+        setLogs(logsData);
       })
       .catch(() => !cancelled && setError('Impossible de charger les notes de cet élève.'))
       .finally(() => !cancelled && setLoadingGrades(false));
@@ -90,6 +98,28 @@ export function Grades() {
       setError("Impossible d'enregistrer la note. Vérifiez vos droits d'accès.");
     } finally {
       setSubmitting(false);
+    }
+  }
+
+  async function handleAddLog(event: FormEvent) {
+    event.preventDefault();
+    if (!selectedStudent || !logForm.description.trim()) return;
+
+    setSubmittingLog(true);
+    setError(null);
+    try {
+      const created = await createStudentLog({
+        studentId: selectedStudent.id,
+        logDate: new Date().toISOString(),
+        logType: logForm.logType,
+        description: logForm.description,
+      });
+      setLogs((prev) => [created, ...prev]);
+      setLogForm({ logType: LOG_TYPES[0], description: '' });
+    } catch {
+      setError("Impossible d'ajouter cette entrée au journal.");
+    } finally {
+      setSubmittingLog(false);
     }
   }
 
@@ -266,6 +296,55 @@ export function Grades() {
               </tbody>
             </table>
           </div>
+        </div>
+
+        <div className="rounded-2xl border border-border bg-surface p-6 shadow-sm lg:col-span-3">
+          <h2 className="text-base font-semibold text-slate">Journal de l'élève</h2>
+
+          <div className="mt-4 flex flex-col gap-2">
+            {logs.length === 0 && <p className="text-sm text-slate-soft">Aucune entrée pour le moment.</p>}
+            {logs.map((log) => (
+              <div key={log.id} className="rounded-xl border border-border px-4 py-3">
+                <div className="flex items-center justify-between">
+                  <span className="rounded-full bg-primary-soft px-2.5 py-0.5 text-xs font-medium text-primary">
+                    {log.logType}
+                  </span>
+                  <span className="text-xs text-slate-soft">
+                    {new Date(log.logDate).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' })}
+                  </span>
+                </div>
+                <p className="mt-2 text-sm text-slate">{log.description}</p>
+              </div>
+            ))}
+          </div>
+
+          {canEditGrades && (
+            <form onSubmit={handleAddLog} className="mt-4 flex flex-col gap-3 border-t border-border pt-4 sm:flex-row sm:items-start">
+              <select
+                value={logForm.logType}
+                onChange={(e) => setLogForm({ ...logForm, logType: e.target.value })}
+                className="rounded-xl border border-border bg-bg px-3.5 py-2.5 text-sm text-slate outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+              >
+                {LOG_TYPES.map((t) => (
+                  <option key={t} value={t}>{t}</option>
+                ))}
+              </select>
+              <input
+                required
+                placeholder="Description de l'événement..."
+                value={logForm.description}
+                onChange={(e) => setLogForm({ ...logForm, description: e.target.value })}
+                className="flex-1 rounded-xl border border-border bg-bg px-3.5 py-2.5 text-sm text-slate outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+              />
+              <button
+                type="submit"
+                disabled={submittingLog}
+                className="rounded-xl bg-primary px-4 py-2.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-primary-hover disabled:opacity-60"
+              >
+                {submittingLog ? 'Ajout...' : 'Ajouter'}
+              </button>
+            </form>
+          )}
         </div>
       </div>
     </div>

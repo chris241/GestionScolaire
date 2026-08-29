@@ -5,6 +5,11 @@ const STATUS_STYLES: Record<string, { label: string; className: string }> = {
   EnRetard: { label: 'En retard', className: 'bg-danger-soft text-danger' },
   Absent: { label: 'Absent', className: 'bg-danger-soft text-danger' },
   Annule: { label: 'Annulé', className: 'bg-border text-slate-soft' },
+  Submitted: { label: 'Soumis', className: 'bg-border text-slate-soft' },
+  UnderReview: { label: 'En examen', className: 'bg-warning-soft text-warning' },
+  Accepted: { label: 'Accepté', className: 'bg-success-soft text-success' },
+  Rejected: { label: 'Refusé', className: 'bg-danger-soft text-danger' },
+  Enrolled: { label: 'Inscrit', className: 'bg-success-soft text-success' },
 };
 
 export function StatusBadge({ status }: { status: string }) {

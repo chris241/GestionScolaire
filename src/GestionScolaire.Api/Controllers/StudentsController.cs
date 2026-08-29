@@ -46,6 +46,11 @@ public class StudentsController : ControllerBase
 
             query = query.Where(s => teacherClassIds.Contains(s.ClassId));
         }
+        else if (_currentUser.Role == nameof(UserRole.Student))
+        {
+            // Portail élève : un élève ne voit que son propre dossier.
+            query = query.Where(s => s.UserId == _currentUser.UserId);
+        }
 
         var students = await query
             .OrderBy(s => s.LastName)
