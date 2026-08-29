@@ -226,6 +226,46 @@ public static class DbSeeder
             });
         }
 
+        context.StudentApplicants.AddRange(
+            new StudentApplicant
+            {
+                FirstName = "Hery",
+                LastName = "Andriamanjato",
+                DateOfBirth = new DateTime(2014, 3, 12, 0, 0, 0, DateTimeKind.Utc),
+                Gender = Gender.Masculin,
+                GuardianName = "Parent d'Hery",
+                GuardianPhone = "034 00 000 01",
+                LevelAppliedFor = "6ème",
+                AcademicYear = academicYear,
+                Status = AdmissionStatus.Submitted
+            },
+            new StudentApplicant
+            {
+                FirstName = "Voninkazo",
+                LastName = "Rasolofo",
+                DateOfBirth = new DateTime(2013, 7, 22, 0, 0, 0, DateTimeKind.Utc),
+                Gender = Gender.Feminin,
+                GuardianName = "Parent de Voninkazo",
+                GuardianPhone = "034 00 000 02",
+                LevelAppliedFor = "5ème",
+                AcademicYear = academicYear,
+                Status = AdmissionStatus.UnderReview
+            },
+            new StudentApplicant
+            {
+                FirstName = "Tahina",
+                LastName = "Rakotoson",
+                DateOfBirth = new DateTime(2014, 1, 5, 0, 0, 0, DateTimeKind.Utc),
+                Gender = Gender.Masculin,
+                GuardianName = "Parent de Tahina",
+                GuardianPhone = "034 00 000 03",
+                LevelAppliedFor = "6ème",
+                AcademicYear = academicYear,
+                Status = AdmissionStatus.Rejected,
+                DecisionDate = DateTime.UtcNow.AddDays(-3),
+                DecisionNotes = "Places déjà complètes pour ce niveau."
+            });
+
         await context.SaveChangesAsync();
     }
 }
