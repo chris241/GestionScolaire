@@ -14,7 +14,7 @@ public record CourseDto(
     List<TopicDto> Topics
 );
 
-public record TopicDto(Guid Id, string Name, string? Description, int Order);
+public record TopicDto(Guid Id, string Name, string? Description, string? Content, int Order);
 
 public record CreateCourseRequest(
     [Required] string Name,
@@ -33,11 +33,13 @@ public record UpdateCourseRequest(
 public record CreateTopicRequest(
     [Required] string Name,
     string? Description,
+    string? Content,
     int Order
 );
 
 public record UpdateTopicRequest(
     [Required] string Name,
     string? Description,
+    string? Content,
     int Order
 );

@@ -1,9 +1,9 @@
 import { useEffect, useState, type FormEvent } from 'react';
-import { fetchCourses, createCourse, deleteCourse, addTopic, deleteTopic } from '../api/courses';
+import { fetchCourses, createCourse, deleteCourse, addTopic, updateTopic, deleteTopic } from '../api/courses';
 import { fetchPrograms } from '../api/programs';
 import { fetchSubjects } from '../api/subjects';
 import { useAuth } from '../lib/AuthContext';
-import type { Course, Program, Subject } from '../types';
+import type { Course, Program, Subject, Topic } from '../types';
 
 const inputClass =
   'rounded-xl border border-border bg-bg px-3.5 py-2.5 text-sm text-slate outline-none focus:border-primary focus:ring-2 focus:ring-primary/20';
@@ -19,9 +19,12 @@ export function Courses() {
 
   const [selectedCourseId, setSelectedCourseId] = useState<string | null>(null);
   const [courseForm, setCourseForm] = useState({ name: '', code: '', subjectId: '', programId: '' });
-  const [topicForm, setTopicForm] = useState({ name: '', order: '1' });
+  const [topicForm, setTopicForm] = useState({ name: '', order: '1', content: '' });
   const [savingCourse, setSavingCourse] = useState(false);
   const [savingTopic, setSavingTopic] = useState(false);
+  const [expandedTopicId, setExpandedTopicId] = useState<string | null>(null);
+  const [contentDrafts, setContentDrafts] = useState<Record<string, string>>({});
+  const [savingContent, setSavingContent] = useState<string | null>(null);
 
   useEffect(() => {
     Promise.all([fetchCourses(), fetchPrograms(), fetchSubjects()])
@@ -78,16 +81,42 @@ export function Courses() {
       const topic = await addTopic(selectedCourseId, {
         name: topicForm.name,
         description: null,
+        content: topicForm.content || null,
         order: Number(topicForm.order) || 1,
       });
       setCourses((prev) =>
         prev.map((c) => (c.id === selectedCourseId ? { ...c, topics: [...c.topics, topic] } : c))
       );
-      setTopicForm({ name: '', order: '1' });
+      setTopicForm({ name: '', order: '1', content: '' });
     } catch {
       setError("Impossible d'ajouter ce chapitre.");
     } finally {
       setSavingTopic(false);
+    }
+  }
+
+  async function handleSaveContent(topic: Topic) {
+    const draft = contentDrafts[topic.id] ?? topic.content ?? '';
+    if (draft === (topic.content ?? '')) return;
+
+    setSavingContent(topic.id);
+    setError(null);
+    try {
+      const updated = await updateTopic(topic.id, {
+        name: topic.name,
+        description: topic.description,
+        content: draft || null,
+        order: topic.order,
+      });
+      setCourses((prev) =>
+        prev.map((c) =>
+          c.id === selectedCourseId ? { ...c, topics: c.topics.map((t) => (t.id === topic.id ? updated : t)) } : c
+        )
+      );
+    } catch {
+      setError("Impossible d'enregistrer le contenu de ce chapitre.");
+    } finally {
+      setSavingContent(null);
     }
   }
 
@@ -222,18 +251,34 @@ export function Courses() {
                 {[...selectedCourse.topics]
                   .sort((a, b) => a.order - b.order)
                   .map((topic) => (
-                    <div
-                      key={topic.id}
-                      className="flex items-center justify-between rounded-xl border border-border px-3.5 py-2.5"
-                    >
-                      <span className="text-sm text-slate">{topic.order}. {topic.name}</span>
-                      <button
-                        type="button"
-                        onClick={() => handleDeleteTopic(topic.id)}
-                        className="text-xs font-medium text-danger hover:text-danger"
-                      >
-                        Supprimer
-                      </button>
+                    <div key={topic.id} className="rounded-xl border border-border px-3.5 py-2.5">
+                      <div className="flex items-center justify-between">
+                        <button
+                          type="button"
+                          onClick={() => setExpandedTopicId(expandedTopicId === topic.id ? null : topic.id)}
+                          className="flex-1 text-left text-sm text-slate"
+                        >
+                          {topic.order}. {topic.name}
+                          {topic.content && <span className="ml-2 text-xs text-primary">(contenu)</span>}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteTopic(topic.id)}
+                          className="text-xs font-medium text-danger hover:text-danger"
+                        >
+                          Supprimer
+                        </button>
+                      </div>
+                      {expandedTopicId === topic.id && (
+                        <textarea
+                          placeholder="Contenu pédagogique (texte, notes de cours...)"
+                          value={contentDrafts[topic.id] ?? topic.content ?? ''}
+                          onChange={(e) => setContentDrafts((prev) => ({ ...prev, [topic.id]: e.target.value }))}
+                          onBlur={() => handleSaveContent(topic)}
+                          disabled={savingContent === topic.id}
+                          className={`${inputClass} mt-2 min-h-28 w-full resize-y text-xs`}
+                        />
+                      )}
                     </div>
                   ))}
               </div>
@@ -257,6 +302,12 @@ export function Courses() {
                     className={inputClass}
                   />
                 </div>
+                <textarea
+                  placeholder="Contenu pédagogique (optionnel)"
+                  value={topicForm.content}
+                  onChange={(e) => setTopicForm({ ...topicForm, content: e.target.value })}
+                  className={`${inputClass} min-h-20 resize-y`}
+                />
                 <button
                   type="submit"
                   disabled={savingTopic}

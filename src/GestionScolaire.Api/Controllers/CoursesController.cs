@@ -121,13 +121,14 @@ public class CoursesController : ControllerBase
             CourseId = id,
             Name = request.Name,
             Description = request.Description,
+            Content = request.Content,
             Order = request.Order
         };
 
         _context.Topics.Add(topic);
         await _context.SaveChangesAsync();
 
-        return Ok(new TopicDto(topic.Id, topic.Name, topic.Description, topic.Order));
+        return Ok(new TopicDto(topic.Id, topic.Name, topic.Description, topic.Content, topic.Order));
     }
 
     [HttpPut("topics/{topicId:guid}")]
@@ -139,11 +140,12 @@ public class CoursesController : ControllerBase
 
         topic.Name = request.Name;
         topic.Description = request.Description;
+        topic.Content = request.Content;
         topic.Order = request.Order;
 
         await _context.SaveChangesAsync();
 
-        return Ok(new TopicDto(topic.Id, topic.Name, topic.Description, topic.Order));
+        return Ok(new TopicDto(topic.Id, topic.Name, topic.Description, topic.Content, topic.Order));
     }
 
     [HttpDelete("topics/{topicId:guid}")]
@@ -163,5 +165,5 @@ public class CoursesController : ControllerBase
         c.Id, c.Name, c.Code, c.Description,
         c.SubjectId, c.Subject.Name,
         c.ProgramId, c.Program.Name,
-        c.Topics.OrderBy(t => t.Order).Select(t => new TopicDto(t.Id, t.Name, t.Description, t.Order)).ToList());
+        c.Topics.OrderBy(t => t.Order).Select(t => new TopicDto(t.Id, t.Name, t.Description, t.Content, t.Order)).ToList());
 }
