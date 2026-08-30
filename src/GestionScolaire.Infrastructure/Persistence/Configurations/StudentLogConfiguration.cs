@@ -14,6 +14,11 @@ public class StudentLogConfiguration : IEntityTypeConfiguration<StudentLog>
         builder.Property(l => l.LogType).IsRequired().HasMaxLength(50);
         builder.Property(l => l.Description).IsRequired();
 
+        builder.HasOne(l => l.School)
+            .WithMany()
+            .HasForeignKey(l => l.SchoolId)
+            .OnDelete(DeleteBehavior.Restrict);
+
         builder.HasIndex(l => new { l.StudentId, l.LogDate });
     }
 }

@@ -17,6 +17,11 @@ public class GuardianConfiguration : IEntityTypeConfiguration<Guardian>
         builder.Property(g => g.Email).HasMaxLength(256);
         builder.Property(g => g.Occupation).HasMaxLength(100);
         builder.Property(g => g.AreasOfInterest).HasMaxLength(500);
+
+        builder.HasOne(g => g.School)
+            .WithMany()
+            .HasForeignKey(g => g.SchoolId)
+            .OnDelete(DeleteBehavior.Restrict);
     }
 }
 

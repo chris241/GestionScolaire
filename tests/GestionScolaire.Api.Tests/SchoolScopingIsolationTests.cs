@@ -14,9 +14,11 @@ using GestionScolaire.Application.DTOs.FeeCategories;
 using GestionScolaire.Application.DTOs.FeeStructures;
 using GestionScolaire.Application.DTOs.Grades;
 using GestionScolaire.Application.DTOs.GradingScales;
+using GestionScolaire.Application.DTOs.Guardians;
 using GestionScolaire.Application.DTOs.Invoices;
 using GestionScolaire.Application.DTOs.LeaveApplications;
 using GestionScolaire.Application.DTOs.Payments;
+using GestionScolaire.Application.DTOs.StudentLogs;
 using GestionScolaire.Application.DTOs.ProgramEnrollments;
 using GestionScolaire.Application.DTOs.Programs;
 using GestionScolaire.Application.DTOs.Rooms;
@@ -37,9 +39,11 @@ namespace GestionScolaire.Api.Tests;
 /// propre) et StudentLeaveApplication. Phase 5 : GradingScale, AssessmentGroup, AssessmentPlan (colonne
 /// propre) et Grade (via Class, sans colonne propre). Phase 6 : FeeCategory, Invoice, Payment (colonne
 /// propre) ; FeeStructure (via AcademicYear) et FeeSchedule (via AcademicTerm), sans colonne propre.
-/// Ces tests vérifient qu'un directeur tout juste inscrit, propriétaire d'une école fraîchement créée,
-/// ne voit jamais les données déjà seedées pour Lumière/Génie — c'est la garantie de sécurité la plus
-/// importante de ces phases.
+/// Phase 7 : Guardian, StudentLog, TeacherLog (colonne propre) ; StudentGuardian (via Guardian, sans
+/// colonne propre) et StudentSibling (aucune colonne, protégé transitivement via le filtre de Student
+/// sur ses deux navigations). Ces tests vérifient qu'un directeur tout juste inscrit, propriétaire d'une
+/// école fraîchement créée, ne voit jamais les données déjà seedées pour Lumière/Génie — c'est la
+/// garantie de sécurité la plus importante de ces phases.
 [Collection(ApiTestCollection.Name)]
 public class SchoolScopingIsolationTests
 {
@@ -432,5 +436,75 @@ public class SchoolScopingIsolationTests
 
         Assert.NotNull(payments);
         Assert.Empty(payments!);
+    }
+
+    [Fact]
+    public async Task NewSchool_NeverSeesSeededGuardians()
+    {
+        var client = await RegisterDirectorWithFreshSchoolAsync();
+
+        var guardians = await client.GetFromJsonAsync<List<GuardianDto>>("/api/guardians");
+
+        Assert.NotNull(guardians);
+        Assert.DoesNotContain(guardians!, g => g.LastName is "Randria" or "Rasoanaivo");
+    }
+
+    [Fact]
+    public async Task NewSchool_DirectorCannotSeeLumieresGuardians_ByGuessingItsStudentId()
+    {
+        // StudentGuardian n'a pas sa propre colonne SchoolId (scopée via Guardian, qui en a une propre) :
+        // ce test vérifie que le filtre à un niveau protège bien même quand IStudentAccessPolicy laisse
+        // passer n'importe quel Directeur. Avant cette phase, GuardiansController.GetByStudent n'avait
+        // aucun filtre du tout sur StudentGuardian — la fuite était donc déjà possible, corrigée ici.
+        var lumiereDirector = await _factory.CreateClient().AsUserAsync("directeur@ecole.mg");
+        var lumiereStudents = await lumiereDirector.GetFromJsonAsync<List<StudentDto>>("/api/students");
+        var lumiereStudentId = lumiereStudents!.First().Id;
+
+        var client = await RegisterDirectorWithFreshSchoolAsync();
+
+        var response = await client.GetAsync($"/api/guardians/student/{lumiereStudentId}");
+        response.EnsureSuccessStatusCode();
+        var links = await response.Content.ReadFromJsonAsync<List<StudentGuardianDto>>();
+
+        Assert.NotNull(links);
+        Assert.Empty(links!);
+    }
+
+    [Fact]
+    public async Task NewSchool_DirectorCannotSeeLumieresSiblings_ByGuessingItsStudentId()
+    {
+        // StudentSibling n'a ni colonne SchoolId ni filtre propre : la protection vient entièrement du
+        // filtre de Student (via Class) appliqué aux deux navigations Student/SiblingStudent. Avant cette
+        // phase, StudentsController.GetSiblings appelait .IgnoreQueryFilters() sans condition, ce qui
+        // désactivait cette protection pour tout le monde, Directeur d'une autre école y compris.
+        var lumiereDirector = await _factory.CreateClient().AsUserAsync("directeur@ecole.mg");
+        var lumiereStudents = await lumiereDirector.GetFromJsonAsync<List<StudentDto>>("/api/students");
+        var lumiereStudentId = lumiereStudents!.First().Id;
+
+        var client = await RegisterDirectorWithFreshSchoolAsync();
+
+        var response = await client.GetAsync($"/api/students/{lumiereStudentId}/siblings");
+        response.EnsureSuccessStatusCode();
+        var siblings = await response.Content.ReadFromJsonAsync<List<SiblingDto>>();
+
+        Assert.NotNull(siblings);
+        Assert.Empty(siblings!);
+    }
+
+    [Fact]
+    public async Task NewSchool_DirectorCannotSeeLumieresStudentLogs_ByGuessingItsStudentId()
+    {
+        var lumiereDirector = await _factory.CreateClient().AsUserAsync("directeur@ecole.mg");
+        var lumiereStudents = await lumiereDirector.GetFromJsonAsync<List<StudentDto>>("/api/students");
+        var lumiereStudentId = lumiereStudents!.First().Id;
+
+        var client = await RegisterDirectorWithFreshSchoolAsync();
+
+        var response = await client.GetAsync($"/api/studentlogs/student/{lumiereStudentId}");
+        response.EnsureSuccessStatusCode();
+        var logs = await response.Content.ReadFromJsonAsync<List<StudentLogDto>>();
+
+        Assert.NotNull(logs);
+        Assert.Empty(logs!);
     }
 }

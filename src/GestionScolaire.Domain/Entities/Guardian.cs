@@ -15,5 +15,8 @@ public class Guardian : BaseEntity
 
     public ICollection<StudentGuardian> Students { get; set; } = new List<StudentGuardian>();
 
+    public Guid SchoolId { get; set; }
+    public School School { get; set; } = null!;
+
     public string FullName => $"{FirstName} {LastName}";
 }

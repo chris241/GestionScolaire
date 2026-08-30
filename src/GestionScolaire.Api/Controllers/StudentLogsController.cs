@@ -2,6 +2,7 @@ using GestionScolaire.Application.Common;
 using GestionScolaire.Application.Common.Interfaces;
 using GestionScolaire.Application.DTOs.StudentLogs;
 using GestionScolaire.Domain.Entities;
+using GestionScolaire.Domain.Enums;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -29,8 +30,15 @@ public class StudentLogsController : ControllerBase
     {
         if (!await HasAccessAsync(studentId)) return Forbid();
 
-        var logs = await _context.StudentLogs
-            .Where(l => l.StudentId == studentId)
+        var query = _context.StudentLogs.Where(l => l.StudentId == studentId);
+
+        // Un Parent (déjà vérifié ci-dessus via l'access policy) n'a pas de claim école. Pour tout autre
+        // rôle le filtre reste actif : HasAccessAsync ne vérifie pas l'école pour un Directeur, c'est le
+        // filtre StudentLog (colonne SchoolId propre) qui referme la frontière multi-tenant ici.
+        if (_currentUser.Role == nameof(UserRole.Parent))
+            query = query.IgnoreQueryFilters();
+
+        var logs = await query
             .OrderByDescending(l => l.LogDate)
             .Select(l => new StudentLogDto(l.Id, l.StudentId, l.LogDate, l.LogType, l.Description))
             .ToListAsync();
@@ -53,7 +61,8 @@ public class StudentLogsController : ControllerBase
             LogDate = request.LogDate.AsUtc(),
             LogType = request.LogType,
             Description = request.Description,
-            RecordedByUserId = _currentUser.UserId!.Value
+            RecordedByUserId = _currentUser.UserId!.Value,
+            SchoolId = _currentUser.SchoolId!.Value
         };
 
         _context.StudentLogs.Add(log);

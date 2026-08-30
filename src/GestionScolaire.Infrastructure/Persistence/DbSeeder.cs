@@ -294,6 +294,7 @@ public static class DbSeeder
             new StudentLog
             {
                 Student = students[0],
+                School = schoolLumiere,
                 LogDate = DateTime.UtcNow.AddDays(-5),
                 LogType = "Académique",
                 Description = "Excellent travail lors du dernier devoir de mathématiques.",
@@ -302,6 +303,7 @@ public static class DbSeeder
             new StudentLog
             {
                 Student = students[1],
+                School = schoolLumiere,
                 LogDate = DateTime.UtcNow.AddDays(-2),
                 LogType = "Comportement",
                 Description = "A aidé un camarade en difficulté pendant le cours de sciences.",
@@ -347,7 +349,8 @@ public static class DbSeeder
             LastName = "Randria",
             Phone = "034 22 111 00",
             Email = "herizo.randria@example.mg",
-            Occupation = "Ingénieur"
+            Occupation = "Ingénieur",
+            School = schoolLumiere
         };
         context.Guardians.Add(sharedGuardian);
         context.StudentGuardians.AddRange(
@@ -360,7 +363,8 @@ public static class DbSeeder
             LastName = "Rasoanaivo",
             Phone = "034 33 222 11",
             Email = null,
-            Occupation = "Commerçante"
+            Occupation = "Commerçante",
+            School = schoolLumiere
         };
         context.Guardians.Add(otherGuardian);
         context.StudentGuardians.Add(new StudentGuardian { Student = students[1], Guardian = otherGuardian, Relationship = "Mère", IsPrimaryContact = true });

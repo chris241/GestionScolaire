@@ -52,7 +52,8 @@ public class TeacherLogsController : ControllerBase
             LogDate = request.LogDate.AsUtc(),
             LogType = request.LogType,
             Description = request.Description,
-            RecordedByUserId = _currentUser.UserId!.Value
+            RecordedByUserId = _currentUser.UserId!.Value,
+            SchoolId = _currentUser.SchoolId!.Value
         };
 
         _context.TeacherLogs.Add(log);

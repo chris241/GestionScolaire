@@ -11,4 +11,7 @@ public class StudentLog : BaseEntity
     public string LogType { get; set; } = string.Empty;
     public string Description { get; set; } = string.Empty;
     public Guid RecordedByUserId { get; set; }
+
+    public Guid SchoolId { get; set; }
+    public School School { get; set; } = null!;
 }
