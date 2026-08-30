@@ -6,8 +6,9 @@ import {
   addFeeStructureItem,
   addFeeSchedule,
   generateInvoices,
+  generateMonthlySchedules,
 } from '../api/feeStructures';
-import { fetchInvoices, fetchStudentCollectionReport, fetchProgramCollectionReport } from '../api/invoices';
+import { fetchInvoices, fetchStudentCollectionReport, fetchProgramCollectionReport, fetchOverdueInvoices } from '../api/invoices';
 import { fetchStudents } from '../api/students';
 import { fetchAcademicYears } from '../api/academicYears';
 import { fetchAcademicTerms } from '../api/academicTerms';
@@ -20,6 +21,7 @@ import type {
   FeeCategory,
   FeeStructure,
   Invoice,
+  OverdueInvoice,
   Program,
   ProgramFeeCollection,
   StudentFeeCollection,
@@ -47,10 +49,12 @@ export function Fees() {
   const [structureForm, setStructureForm] = useState({ name: '', programId: '' });
   const [itemForm, setItemForm] = useState({ structureId: '', feeCategoryId: '', amount: '' });
   const [scheduleForm, setScheduleForm] = useState({ structureId: '', academicTermId: '', dueDate: '' });
+  const [monthlyForm, setMonthlyForm] = useState({ structureId: '', academicTermId: '', dueDayOfMonth: '5' });
   const [savingCategory, setSavingCategory] = useState(false);
   const [savingStructure, setSavingStructure] = useState(false);
   const [savingItem, setSavingItem] = useState(false);
   const [savingSchedule, setSavingSchedule] = useState(false);
+  const [savingMonthly, setSavingMonthly] = useState(false);
   const [generatingId, setGeneratingId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -156,6 +160,30 @@ export function Fees() {
       setError("Impossible d'ajouter cette échéance.");
     } finally {
       setSavingSchedule(false);
+    }
+  }
+
+  async function handleGenerateMonthly(event: FormEvent) {
+    event.preventDefault();
+    if (!monthlyForm.structureId || !monthlyForm.academicTermId) return;
+
+    setSavingMonthly(true);
+    setError(null);
+    try {
+      const result = await generateMonthlySchedules(monthlyForm.structureId, {
+        academicTermId: monthlyForm.academicTermId,
+        dueDayOfMonth: Number(monthlyForm.dueDayOfMonth),
+      });
+      flashMessage(
+        `${result.schedulesCreated} échéance(s) mensuelle(s) créée(s), ${result.invoicesCreated} facture(s) générée(s).`
+      );
+      await refreshStructures();
+      setInvoices(await fetchInvoices());
+      setMonthlyForm({ structureId: monthlyForm.structureId, academicTermId: '', dueDayOfMonth: '5' });
+    } catch {
+      setError('Impossible de générer les échéances mensuelles.');
+    } finally {
+      setSavingMonthly(false);
     }
   }
 
@@ -304,6 +332,36 @@ export function Fees() {
                     Ajouter
                   </button>
                 </form>
+
+                <form onSubmit={handleGenerateMonthly} className="mt-2 flex flex-wrap items-center gap-2 border-t border-border pt-3">
+                  <span className="text-xs text-slate-soft">Ou générer un mois par échéance, pour tout un trimestre :</span>
+                  <select
+                    value={monthlyForm.structureId === structure.id ? monthlyForm.academicTermId : ''}
+                    onChange={(e) => setMonthlyForm({ structureId: structure.id, academicTermId: e.target.value, dueDayOfMonth: monthlyForm.dueDayOfMonth })}
+                    className={`${inputClass} flex-1`}
+                  >
+                    <option value="" disabled>Trimestre...</option>
+                    {terms.map((t) => (
+                      <option key={t.id} value={t.id}>{t.name}</option>
+                    ))}
+                  </select>
+                  <input
+                    type="number"
+                    min="1"
+                    max="28"
+                    title="Jour d'échéance dans le mois"
+                    value={monthlyForm.structureId === structure.id ? monthlyForm.dueDayOfMonth : '5'}
+                    onChange={(e) => setMonthlyForm({ structureId: structure.id, academicTermId: monthlyForm.academicTermId, dueDayOfMonth: e.target.value })}
+                    className={`${inputClass} w-20`}
+                  />
+                  <button
+                    type="submit"
+                    disabled={savingMonthly}
+                    className="rounded-xl border border-primary px-3 py-2.5 text-xs font-medium text-primary shadow-sm transition-colors hover:bg-primary-soft disabled:opacity-60"
+                  >
+                    {savingMonthly ? 'Génération...' : 'Générer le mois par mois'}
+                  </button>
+                </form>
               </div>
             </div>
           </div>
@@ -350,6 +408,7 @@ function FeeCollectionReports() {
   const [selectedClassId, setSelectedClassId] = useState('');
   const [studentReport, setStudentReport] = useState<StudentFeeCollection[]>([]);
   const [programReport, setProgramReport] = useState<ProgramFeeCollection[]>([]);
+  const [overdueInvoices, setOverdueInvoices] = useState<OverdueInvoice[]>([]);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -363,6 +422,10 @@ function FeeCollectionReports() {
     fetchProgramCollectionReport()
       .then(setProgramReport)
       .catch(() => setError('Impossible de charger le rapport par programme.'));
+
+    fetchOverdueInvoices()
+      .then(setOverdueInvoices)
+      .catch(() => setError('Impossible de charger les retards de paiement.'));
   }, []);
 
   useEffect(() => {
@@ -387,6 +450,45 @@ function FeeCollectionReports() {
           {error}
         </div>
       )}
+
+      <div className="rounded-2xl border border-border bg-surface p-6 shadow-sm">
+        <h2 className="text-base font-semibold text-slate">Retards de paiement</h2>
+        <p className="mt-1 text-xs text-slate-soft">
+          {overdueInvoices.length === 0
+            ? 'Aucun retard : toutes les factures en attente sont encore dans les délais.'
+            : `${overdueInvoices.length} facture(s) en retard.`}
+        </p>
+
+        <div className="mt-4 overflow-x-auto rounded-xl border border-border">
+          <table className="w-full text-left text-sm">
+            <thead>
+              <tr className="text-xs uppercase tracking-wide text-slate-soft">
+                <th className="px-4 py-2 font-medium">Élève</th>
+                <th className="px-4 py-2 font-medium">Classe</th>
+                <th className="px-4 py-2 font-medium">Facture</th>
+                <th className="px-4 py-2 font-medium">Montant</th>
+                <th className="px-4 py-2 font-medium">Échéance</th>
+                <th className="px-4 py-2 font-medium">Retard</th>
+              </tr>
+            </thead>
+            <tbody>
+              {overdueInvoices.length === 0 && (
+                <tr><td colSpan={6} className="px-4 py-6 text-center text-slate-soft">Aucun retard.</td></tr>
+              )}
+              {overdueInvoices.map((i) => (
+                <tr key={i.id} className="border-t border-border">
+                  <td className="px-4 py-2 font-medium text-slate">{i.studentFullName}</td>
+                  <td className="px-4 py-2 text-slate-soft">{i.className}</td>
+                  <td className="px-4 py-2 text-slate-soft">{i.invoiceNumber}</td>
+                  <td className="px-4 py-2 text-slate-soft">{formatAmount(i.totalAmount)}</td>
+                  <td className="px-4 py-2 text-slate-soft">{formatDate(i.dueDate)}</td>
+                  <td className="px-4 py-2 font-medium text-danger">{i.daysLate} jour(s)</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
 
       <div className="rounded-2xl border border-border bg-surface p-6 shadow-sm">
         <div className="flex flex-wrap items-center justify-between gap-3">

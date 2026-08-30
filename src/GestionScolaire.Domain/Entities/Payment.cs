@@ -25,4 +25,13 @@ public class Payment : BaseEntity
 
     public Guid SchoolId { get; set; }
     public School School { get; set; } = null!;
+
+    /// Renseigné uniquement pour un paiement déclaré par un Parent (Status initial EnValidation) ; null
+    /// pour un paiement saisi directement par le Directeur (déjà considéré reçu).
+    public Guid? DeclaredByUserId { get; set; }
+
+    /// Décision du Directeur sur une déclaration de paiement (validation ou rejet) — même patron que
+    /// StudentLeaveApplication.
+    public DateTime? DecisionDate { get; set; }
+    public string? DecisionNotes { get; set; }
 }

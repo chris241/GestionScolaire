@@ -18,6 +18,7 @@ public class PaymentConfiguration : IEntityTypeConfiguration<Payment>
         builder.Property(p => p.Status).HasConversion<string>().HasMaxLength(20);
         builder.Property(p => p.Method).HasMaxLength(50);
         builder.Property(p => p.InvoiceNumber).HasMaxLength(50);
+        builder.Property(p => p.DecisionNotes).HasMaxLength(500);
 
         builder.HasOne(p => p.Invoice)
             .WithMany(i => i.Payments)

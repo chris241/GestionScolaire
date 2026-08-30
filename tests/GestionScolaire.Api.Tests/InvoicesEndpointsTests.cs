@@ -57,4 +57,32 @@ public class InvoicesEndpointsTests
 
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
     }
+
+    [Fact]
+    public async Task GetOverdueReport_ListsSeededPendingInvoice_NotThePaidOne()
+    {
+        // La facture "En attente" du seed a une échéance en 2025, donc déjà dépassée à l'exécution des tests.
+        var client = await _factory.CreateClient().AsUserAsync("directeur@ecole.mg");
+        var allInvoices = await client.GetFromJsonAsync<List<InvoiceDto>>("/api/invoices");
+        // Numéros de facture déterministes plutôt que Single(Status==...) : d'autres tests peuvent créer
+        // des factures supplémentaires payées/en attente dans la même base partagée.
+        var pendingInvoice = allInvoices!.Single(i => i.InvoiceNumber == "FAC-2025T1-002");
+        var paidInvoice = allInvoices!.Single(i => i.InvoiceNumber == "FAC-2025T1-001");
+
+        var overdue = await client.GetFromJsonAsync<List<OverdueInvoiceDto>>("/api/invoices/reports/overdue");
+
+        Assert.Contains(overdue!, i => i.Id == pendingInvoice.Id);
+        Assert.DoesNotContain(overdue!, i => i.Id == paidInvoice.Id);
+        Assert.All(overdue!, i => Assert.True(i.DaysLate > 0));
+    }
+
+    [Fact]
+    public async Task Teacher_CannotAccessOverdueReport()
+    {
+        var client = await _factory.CreateClient().AsUserAsync("prof.math@ecole.mg");
+
+        var response = await client.GetAsync("/api/invoices/reports/overdue");
+
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
 }

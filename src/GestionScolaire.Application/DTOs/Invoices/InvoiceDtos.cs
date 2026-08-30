@@ -30,3 +30,15 @@ public record ProgramFeeCollectionDto(
     decimal PaidAmount,
     decimal OutstandingAmount
 );
+
+/// Retard de paiement : une facture non payée dont l'échéance est déjà passée.
+public record OverdueInvoiceDto(
+    Guid Id,
+    Guid StudentId,
+    string StudentFullName,
+    string ClassName,
+    string InvoiceNumber,
+    decimal TotalAmount,
+    DateTime DueDate,
+    int DaysLate
+);

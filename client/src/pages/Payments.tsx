@@ -1,6 +1,14 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { Navigate } from 'react-router-dom';
-import { fetchPayments, fetchPaymentsByStudent, createPayment } from '../api/payments';
+import {
+  fetchPayments,
+  fetchPaymentsByStudent,
+  fetchPendingPayments,
+  createPayment,
+  declarePayment,
+  validatePayment,
+  rejectPayment,
+} from '../api/payments';
 import { fetchStudents } from '../api/students';
 import { fetchStudentInvoices } from '../api/invoices';
 import type { Payment, Student, Invoice } from '../types';
@@ -25,14 +33,17 @@ async function loadPaymentsForSelfView(): Promise<Payment[]> {
 
 export function Payments() {
   const { user } = useAuth();
-  const isSelfView = user?.role === 'Parent' || user?.role === 'Student';
+  const isParent = user?.role === 'Parent';
+  const isSelfView = isParent || user?.role === 'Student';
   const isDirector = user?.role === 'Director';
 
   const [payments, setPayments] = useState<Payment[]>([]);
   const [students, setStudents] = useState<Student[]>([]);
   const [studentInvoices, setStudentInvoices] = useState<Invoice[]>([]);
+  const [pending, setPending] = useState<Payment[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [academicYear, setAcademicYear] = useState('');
 
   const [form, setForm] = useState({
     studentId: '',
@@ -45,26 +56,51 @@ export function Payments() {
   });
   const [saving, setSaving] = useState(false);
 
+  const [declareForm, setDeclareForm] = useState({
+    studentId: '',
+    description: '',
+    amount: '',
+    academicYear: '2025-2026',
+    term: 'Trimestre 1',
+    method: 'Mobile Money',
+    invoiceId: '',
+  });
+  const [declaring, setDeclaring] = useState(false);
+  const [decidingId, setDecidingId] = useState<string | null>(null);
+  const [rejectNotes, setRejectNotes] = useState<Record<string, string>>({});
+
+  function loadDirectorPayments(year?: string) {
+    return Promise.all([fetchPayments(50, year || undefined), fetchPendingPayments()]).then(([all, pendingList]) => {
+      setPayments(all);
+      setPending(pendingList);
+    });
+  }
+
   useEffect(() => {
     if (user?.role === 'Teacher') return;
 
     let cancelled = false;
+    setLoading(true);
 
-    const load = isSelfView ? loadPaymentsForSelfView() : fetchPayments();
+    const loadPromise = isDirector
+      ? loadDirectorPayments()
+      : (isSelfView ? loadPaymentsForSelfView() : fetchPayments()).then((data) => {
+          if (!cancelled) setPayments(data);
+        });
 
-    load
-      .then((data) => !cancelled && setPayments(data))
+    loadPromise
       .catch(() => !cancelled && setError('Impossible de charger les paiements.'))
       .finally(() => !cancelled && setLoading(false));
 
-    if (isDirector) {
+    if (isDirector || isParent) {
       fetchStudents().then((data) => !cancelled && setStudents(data));
     }
 
     return () => {
       cancelled = true;
     };
-  }, [isSelfView, isDirector, user?.role]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isSelfView, isDirector, isParent, user?.role]);
 
   useEffect(() => {
     if (!isDirector || !form.studentId) {
@@ -75,6 +111,17 @@ export function Payments() {
       .then((data) => setStudentInvoices(data.filter((i) => i.status !== 'Paye')))
       .catch(() => setStudentInvoices([]));
   }, [isDirector, form.studentId]);
+
+  const [declareInvoices, setDeclareInvoices] = useState<Invoice[]>([]);
+  useEffect(() => {
+    if (!isParent || !declareForm.studentId) {
+      setDeclareInvoices([]);
+      return;
+    }
+    fetchStudentInvoices(declareForm.studentId)
+      .then((data) => setDeclareInvoices(data.filter((i) => i.status !== 'Paye')))
+      .catch(() => setDeclareInvoices([]));
+  }, [isParent, declareForm.studentId]);
 
   if (user?.role === 'Teacher') {
     return <Navigate to="/notes" replace />;
@@ -103,6 +150,72 @@ export function Payments() {
     }
   }
 
+  function handleDeclareInvoiceChange(invoiceId: string) {
+    const invoice = declareInvoices.find((i) => i.id === invoiceId);
+    setDeclareForm((prev) => ({
+      ...prev,
+      invoiceId,
+      amount: invoice ? String(invoice.totalAmount) : prev.amount,
+      description: invoice ? `${invoice.feeStructureName} — ${invoice.academicTermName}` : prev.description,
+    }));
+  }
+
+  async function handleDeclarePayment(event: FormEvent) {
+    event.preventDefault();
+    setDeclaring(true);
+    setError(null);
+    try {
+      await declarePayment({
+        studentId: declareForm.studentId,
+        description: declareForm.description,
+        amount: Number(declareForm.amount),
+        academicYear: declareForm.academicYear,
+        term: declareForm.term,
+        method: declareForm.method,
+        invoiceId: declareForm.invoiceId || null,
+      });
+      const refreshed = await fetchPaymentsByStudent(declareForm.studentId);
+      setPayments((prev) => [...refreshed, ...prev.filter((p) => p.studentId !== declareForm.studentId)]);
+      setDeclareForm({ ...declareForm, description: '', amount: '', invoiceId: '' });
+    } catch {
+      setError('Impossible de déclarer ce paiement. Vérifiez les champs et réessayez.');
+    } finally {
+      setDeclaring(false);
+    }
+  }
+
+  async function handleValidate(id: string) {
+    setDecidingId(id);
+    setError(null);
+    try {
+      await validatePayment(id);
+      await loadDirectorPayments(academicYear);
+    } catch {
+      setError('Impossible de valider ce paiement.');
+    } finally {
+      setDecidingId(null);
+    }
+  }
+
+  async function handleReject(id: string) {
+    setDecidingId(id);
+    setError(null);
+    try {
+      await rejectPayment(id, rejectNotes[id]?.trim() || null);
+      setRejectNotes((prev) => ({ ...prev, [id]: '' }));
+      await loadDirectorPayments(academicYear);
+    } catch {
+      setError('Impossible de rejeter ce paiement.');
+    } finally {
+      setDecidingId(null);
+    }
+  }
+
+  function handleAcademicYearFilterChange(value: string) {
+    setAcademicYear(value);
+    loadDirectorPayments(value).catch(() => setError('Impossible de charger les paiements.'));
+  }
+
   const totalDue = payments.reduce((sum, p) => sum + p.amount, 0);
   const totalPaid = payments.filter((p) => p.status === 'Paye').reduce((sum, p) => sum + p.amount, 0);
 
@@ -116,6 +229,88 @@ export function Payments() {
       {error && (
         <div className="mt-6 rounded-xl border border-danger/20 bg-danger-soft px-4 py-3 text-sm text-danger">
           {error}
+        </div>
+      )}
+
+      {isParent && (
+        <div className="mt-6 rounded-2xl border border-border bg-surface p-6 shadow-sm">
+          <h2 className="text-base font-semibold text-slate">Déclarer un paiement</h2>
+          <p className="mt-1 text-xs text-slate-soft">
+            Réglé hors application (espèces remis à l'école, Mobile Money, virement) : le Directeur vérifiera et validera votre déclaration.
+          </p>
+          <form onSubmit={handleDeclarePayment} className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-3">
+            <select
+              required
+              value={declareForm.studentId}
+              onChange={(e) => setDeclareForm({ ...declareForm, studentId: e.target.value, invoiceId: '', amount: '', description: '' })}
+              className={inputClass}
+            >
+              <option value="" disabled>Enfant...</option>
+              {students.map((s) => (
+                <option key={s.id} value={s.id}>{s.firstName} {s.lastName}</option>
+              ))}
+            </select>
+            <select value={declareForm.invoiceId} onChange={(e) => handleDeclareInvoiceChange(e.target.value)} className={inputClass}>
+              <option value="">Sans facture</option>
+              {declareInvoices.map((i) => (
+                <option key={i.id} value={i.id}>{i.invoiceNumber} — {formatAmount(i.totalAmount)}</option>
+              ))}
+            </select>
+            <input required type="number" min="0" placeholder="Montant" value={declareForm.amount} onChange={(e) => setDeclareForm({ ...declareForm, amount: e.target.value })} className={inputClass} />
+            <input required placeholder="Description" value={declareForm.description} onChange={(e) => setDeclareForm({ ...declareForm, description: e.target.value })} className={inputClass} />
+            <input required placeholder="Trimestre" value={declareForm.term} onChange={(e) => setDeclareForm({ ...declareForm, term: e.target.value })} className={inputClass} />
+            <input required placeholder="Méthode (ex: Mobile Money)" value={declareForm.method} onChange={(e) => setDeclareForm({ ...declareForm, method: e.target.value })} className={inputClass} />
+            <button
+              type="submit"
+              disabled={declaring}
+              className="col-span-2 mt-1 rounded-xl bg-primary px-4 py-2.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-primary-hover disabled:opacity-60 md:col-span-3"
+            >
+              {declaring ? 'Envoi...' : 'Déclarer le paiement'}
+            </button>
+          </form>
+        </div>
+      )}
+
+      {isDirector && pending.length > 0 && (
+        <div className="mt-6 rounded-2xl border border-warning/30 bg-warning-soft/40 p-6 shadow-sm">
+          <h2 className="text-base font-semibold text-slate">Paiements à valider ({pending.length})</h2>
+          <p className="mt-1 text-xs text-slate-soft">Déclarations envoyées par des parents, en attente de votre confirmation.</p>
+          <div className="mt-4 flex flex-col gap-3">
+            {pending.map((p) => (
+              <div key={p.id} className="rounded-xl border border-border bg-surface px-4 py-3">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div>
+                    <p className="text-sm font-medium text-slate">{p.studentFullName} — {formatAmount(p.amount)}</p>
+                    <p className="text-xs text-slate-soft">{p.description} · {p.method ?? '—'} · {formatDate(p.dueDate)}</p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => handleValidate(p.id)}
+                      disabled={decidingId === p.id}
+                      className="rounded-xl bg-success px-3 py-2 text-xs font-medium text-white shadow-sm transition-colors hover:opacity-90 disabled:opacity-60"
+                    >
+                      Valider
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleReject(p.id)}
+                      disabled={decidingId === p.id}
+                      className="rounded-xl border border-danger/40 px-3 py-2 text-xs font-medium text-danger transition-colors hover:bg-danger-soft disabled:opacity-60"
+                    >
+                      Rejeter
+                    </button>
+                  </div>
+                </div>
+                <input
+                  placeholder="Motif de rejet (optionnel)"
+                  value={rejectNotes[p.id] ?? ''}
+                  onChange={(e) => setRejectNotes((prev) => ({ ...prev, [p.id]: e.target.value }))}
+                  className={`${inputClass} mt-2 w-full text-xs`}
+                />
+              </div>
+            ))}
+          </div>
         </div>
       )}
 
@@ -152,6 +347,20 @@ export function Payments() {
       )}
 
       <div className="mt-6 overflow-x-auto rounded-2xl border border-border bg-surface shadow-sm">
+        {isDirector && (
+          <div className="flex items-center justify-between gap-3 border-b border-border px-6 py-3">
+            <h2 className="text-sm font-semibold text-slate">Historique des paiements</h2>
+            <select
+              value={academicYear}
+              onChange={(e) => handleAcademicYearFilterChange(e.target.value)}
+              className="rounded-xl border border-border bg-bg px-3 py-2 text-xs text-slate outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+            >
+              <option value="">Toutes les années</option>
+              <option value="2025-2026">2025-2026</option>
+              <option value="2026-2027">2026-2027</option>
+            </select>
+          </div>
+        )}
         <table className="w-full text-left text-sm">
           <thead>
             <tr className="text-xs uppercase tracking-wide text-slate-soft">

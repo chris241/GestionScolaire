@@ -1,4 +1,4 @@
-export type PaymentStatus = 'EnAttente' | 'Paye' | 'EnRetard' | 'Annule';
+export type PaymentStatus = 'EnAttente' | 'Paye' | 'EnRetard' | 'Annule' | 'EnValidation';
 
 export interface DashboardStats {
   enrolledStudents: number;
@@ -26,6 +26,8 @@ export interface Payment {
   dueDate: string;
   paidAt: string | null;
   status: PaymentStatus;
+  method: string | null;
+  decisionNotes: string | null;
   invoiceId: string | null;
 }
 
@@ -550,6 +552,17 @@ export interface StudentFeeCollection {
   invoicedAmount: number;
   paidAmount: number;
   outstandingAmount: number;
+}
+
+export interface OverdueInvoice {
+  id: string;
+  studentId: string;
+  studentFullName: string;
+  className: string;
+  invoiceNumber: string;
+  totalAmount: number;
+  dueDate: string;
+  daysLate: number;
 }
 
 export interface ProgramFeeCollection {
