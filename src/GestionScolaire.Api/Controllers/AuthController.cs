@@ -169,9 +169,12 @@ public class AuthController : ControllerBase
             var teacher = await _context.Teachers.IgnoreQueryFilters().FirstOrDefaultAsync(t => t.UserId == user.Id);
             if (teacher is null) return new List<SchoolSummaryDto>();
 
+            // Trié par date de rattachement (pas par nom d'école) : le premier élément sert de choix par
+            // défaut à la connexion tant que l'enseignant n'a jamais explicitement basculé d'école — l'école
+            // à laquelle il a été rattaché en premier est un meilleur défaut qu'un ordre alphabétique arbitraire.
             return await _context.TeacherSchools
                 .Where(ts => ts.TeacherId == teacher.Id)
-                .OrderBy(ts => ts.School.Name)
+                .OrderBy(ts => ts.CreatedAt)
                 .Select(ts => new SchoolSummaryDto(ts.School.Id, ts.School.Name))
                 .ToListAsync();
         }

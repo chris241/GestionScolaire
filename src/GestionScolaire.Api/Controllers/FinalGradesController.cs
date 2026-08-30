@@ -96,10 +96,10 @@ public class FinalGradesController : ControllerBase
     {
         if (!await HasAccessAsync(studentId)) return Forbid();
 
-        var student = await _context.Students.FindAsync(studentId);
+        var student = await _context.Students.IgnoreQueryFilters().FirstOrDefaultAsync(s => s.Id == studentId);
         if (student is null) return NotFound();
 
-        var classmates = await _context.Students.Where(s => s.ClassId == student.ClassId && s.IsActive).ToListAsync();
+        var classmates = await _context.Students.IgnoreQueryFilters().Where(s => s.ClassId == student.ClassId && s.IsActive).ToListAsync();
 
         var grades = await _context.Grades
             .Include(g => g.Subject)

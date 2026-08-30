@@ -13,10 +13,12 @@ namespace GestionScolaire.Api.Controllers;
 public class StudentCategoriesController : ControllerBase
 {
     private readonly IApplicationDbContext _context;
+    private readonly ICurrentUserService _currentUser;
 
-    public StudentCategoriesController(IApplicationDbContext context)
+    public StudentCategoriesController(IApplicationDbContext context, ICurrentUserService currentUser)
     {
         _context = context;
+        _currentUser = currentUser;
     }
 
     [HttpGet]
@@ -34,7 +36,7 @@ public class StudentCategoriesController : ControllerBase
     [Authorize(Roles = "Director")]
     public async Task<ActionResult<StudentCategoryDto>> Create(CreateStudentCategoryRequest request)
     {
-        var category = new StudentCategory { Name = request.Name, Description = request.Description };
+        var category = new StudentCategory { Name = request.Name, Description = request.Description, SchoolId = _currentUser.SchoolId!.Value };
 
         _context.StudentCategories.Add(category);
         await _context.SaveChangesAsync();

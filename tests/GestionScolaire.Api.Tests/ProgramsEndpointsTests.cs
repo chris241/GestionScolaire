@@ -19,13 +19,15 @@ public class ProgramsEndpointsTests
     [Fact]
     public async Task GetAll_ReturnsSeededProgram_WithClassesAndCourses()
     {
-        var client = await _factory.CreateClient().AsUserAsync("parent1@ecole.mg");
+        // AcademicProgram est scopé par école : un Parent (sans contexte école) ne peut plus le lister,
+        // contrairement à un Directeur, qui ne voit que le programme de son école active.
+        var client = await _factory.CreateClient().AsUserAsync("directeur@ecole.mg");
 
         var programs = await client.GetFromJsonAsync<List<ProgramDto>>("/api/programs");
 
         Assert.NotNull(programs);
         var seeded = Assert.Single(programs!, p => p.Code == "COL-GEN");
-        Assert.Equal(3, seeded.ClassCount);
+        Assert.Equal(2, seeded.ClassCount);
         Assert.Equal(5, seeded.CourseCount);
     }
 

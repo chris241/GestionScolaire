@@ -17,5 +17,10 @@ public class StudentBatchConfiguration : IEntityTypeConfiguration<StudentBatch>
             .WithMany()
             .HasForeignKey(b => b.AcademicYearId)
             .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasOne(b => b.School)
+            .WithMany()
+            .HasForeignKey(b => b.SchoolId)
+            .OnDelete(DeleteBehavior.Restrict);
     }
 }

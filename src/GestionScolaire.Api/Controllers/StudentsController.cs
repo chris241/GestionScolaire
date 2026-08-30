@@ -29,13 +29,17 @@ public class StudentsController : ControllerBase
     [HttpGet]
     public async Task<ActionResult<List<StudentDto>>> GetAll([FromQuery] Guid? classId)
     {
-        var query = _context.Students.IgnoreQueryFilters().Include(s => s.Class).AsQueryable();
+        var query = _context.Students.Include(s => s.Class).AsQueryable();
 
         if (classId.HasValue)
             query = query.Where(s => s.ClassId == classId.Value);
 
         if (_currentUser.Role == nameof(UserRole.Parent))
         {
+            // Un Parent n'a pas de claim école (voir AuthController) : son accès reste scopé élève par
+            // élève via StudentParent, donc on ignore le filtre multi-établissement pour cette branche.
+            query = query.IgnoreQueryFilters();
+
             var childIds = _context.StudentParents
                 .Where(sp => sp.ParentUserId == _currentUser.UserId)
                 .Select(sp => sp.StudentId);
@@ -45,7 +49,7 @@ public class StudentsController : ControllerBase
         else if (_currentUser.Role == nameof(UserRole.Teacher))
         {
             // MVP : un professeur n'est titulaire (HomeroomTeacher) que d'une seule classe.
-            var teacherClassIds = _context.Classes.IgnoreQueryFilters()
+            var teacherClassIds = _context.Classes
                 .Where(c => c.HomeroomTeacher != null && c.HomeroomTeacher.UserId == _currentUser.UserId)
                 .Select(c => c.Id);
 

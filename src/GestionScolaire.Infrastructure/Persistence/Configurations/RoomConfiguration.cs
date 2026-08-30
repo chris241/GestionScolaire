@@ -12,7 +12,12 @@ public class RoomConfiguration : IEntityTypeConfiguration<Room>
         builder.HasKey(r => r.Id);
 
         builder.Property(r => r.Name).IsRequired().HasMaxLength(50);
-        builder.HasIndex(r => r.Name).IsUnique();
+        builder.HasIndex(r => new { r.SchoolId, r.Name }).IsUnique();
         builder.Property(r => r.Building).HasMaxLength(100);
+
+        builder.HasOne(r => r.School)
+            .WithMany()
+            .HasForeignKey(r => r.SchoolId)
+            .OnDelete(DeleteBehavior.Restrict);
     }
 }

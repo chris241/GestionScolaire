@@ -11,4 +11,7 @@ public class AcademicTerm : BaseEntity
 
     public Guid AcademicYearId { get; set; }
     public AcademicYear AcademicYear { get; set; } = null!;
+
+    public Guid SchoolId { get; set; }
+    public School School { get; set; } = null!;
 }

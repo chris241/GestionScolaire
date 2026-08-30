@@ -67,11 +67,11 @@ public class AcademicTermsEndpointsTests
     public async Task Parent_CannotCreateTerm()
     {
         var client = await _factory.CreateClient().AsUserAsync("parent1@ecole.mg");
-        var years = await client.GetFromJsonAsync<List<AcademicYearDto>>("/api/academicyears");
-        var seededYear = years!.First();
 
+        // Le rôle est rejeté avant toute validation de l'année académique : un Guid arbitraire suffit,
+        // et convient d'autant mieux qu'un Parent n'a plus de contexte école pour en lister une vraie.
         var response = await client.PostAsJsonAsync("/api/academicterms", new CreateAcademicTermRequest(
-            "Trimestre Interdit", 100, DateTime.UtcNow, DateTime.UtcNow.AddMonths(3), seededYear.Id));
+            "Trimestre Interdit", 100, DateTime.UtcNow, DateTime.UtcNow.AddMonths(3), Guid.NewGuid()));
 
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
     }

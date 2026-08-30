@@ -44,7 +44,7 @@ public class AssessmentPlansController : ControllerBase
         if (!await CanAccessClassAsync(request.ClassId)) return Forbid();
 
         var course = await _context.Courses.FindAsync(request.CourseId);
-        var schoolClass = await _context.Classes.IgnoreQueryFilters().FirstOrDefaultAsync(c => c.Id == request.ClassId);
+        var schoolClass = await _context.Classes.FirstOrDefaultAsync(c => c.Id == request.ClassId);
         var term = await _context.AcademicTerms.FindAsync(request.AcademicTermId);
         var group = await _context.AssessmentGroups.FindAsync(request.AssessmentGroupId);
 

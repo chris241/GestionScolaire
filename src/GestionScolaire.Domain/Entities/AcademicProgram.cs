@@ -12,6 +12,9 @@ public class AcademicProgram : BaseEntity
     public string? Description { get; set; }
     public bool IsActive { get; set; } = true;
 
+    public Guid SchoolId { get; set; }
+    public School School { get; set; } = null!;
+
     public ICollection<SchoolClass> Classes { get; set; } = new List<SchoolClass>();
     public ICollection<Course> Courses { get; set; } = new List<Course>();
 }

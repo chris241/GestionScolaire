@@ -13,5 +13,10 @@ public class AcademicTermConfiguration : IEntityTypeConfiguration<AcademicTerm>
 
         builder.Property(t => t.Name).IsRequired().HasMaxLength(50);
         builder.HasIndex(t => new { t.AcademicYearId, t.Order }).IsUnique();
+
+        builder.HasOne(t => t.School)
+            .WithMany()
+            .HasForeignKey(t => t.SchoolId)
+            .OnDelete(DeleteBehavior.Restrict);
     }
 }

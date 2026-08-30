@@ -27,9 +27,11 @@ public class AcademicYearsEndpointsTests
     }
 
     [Fact]
-    public async Task GetAll_ReturnsSeededYear_ForAnyAuthenticatedRole()
+    public async Task GetAll_ReturnsSeededYear_ForRoleWithSchoolContext()
     {
-        var client = await _factory.CreateClient().AsUserAsync("parent1@ecole.mg");
+        // AcademicYear est scopée par école : un Parent (sans contexte école) ne peut plus lister
+        // les années académiques, contrairement à un Enseignant rattaché à une école.
+        var client = await _factory.CreateClient().AsUserAsync("prof.math@ecole.mg");
 
         var years = await client.GetFromJsonAsync<List<AcademicYearDto>>("/api/academicyears");
 

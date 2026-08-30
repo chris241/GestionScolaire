@@ -22,7 +22,9 @@ public class StudentGroupsEndpointsTests
     [Fact]
     public async Task GetAll_ReturnsSeededGroup_WithThreeMembers()
     {
-        var client = await _factory.CreateClient().AsUserAsync("parent1@ecole.mg");
+        // StudentGroup est scopé par école : un Parent (sans contexte école) ne peut plus le lister,
+        // contrairement à un Directeur, qui ne voit que les groupes de son école active.
+        var client = await _factory.CreateClient().AsUserAsync("directeur@ecole.mg");
 
         var groups = await client.GetFromJsonAsync<List<StudentGroupDto>>("/api/studentgroups");
 

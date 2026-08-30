@@ -88,7 +88,9 @@ public class StudentApplicantsController : ControllerBase
     [EnableRateLimiting("public-form")]
     public async Task<ActionResult<StudentApplicantDto>> CreatePublic(PublicApplicantRequest request)
     {
-        var year = await _context.AcademicYears.FirstOrDefaultAsync(y => y.IsCurrent);
+        // Visiteur anonyme, donc sans contexte école : StudentApplicant n'est pas encore scopé par école
+        // (prévu en phase 2 du plan multi-établissements), on ignore donc le filtre pour l'instant.
+        var year = await _context.AcademicYears.IgnoreQueryFilters().FirstOrDefaultAsync(y => y.IsCurrent);
         if (year is null)
             return StatusCode(StatusCodes.Status503ServiceUnavailable, new { message = "Les candidatures ne sont pas ouvertes pour le moment." });
 
@@ -216,7 +218,9 @@ public class StudentApplicantsController : ControllerBase
     {
         if (programId.HasValue)
         {
-            var program = await _context.AcademicPrograms.FindAsync(programId.Value);
+            // Peut être appelé depuis le formulaire public (anonyme, sans contexte école) : AcademicProgram
+            // n'est pas non plus scopé côté StudentApplicant pour l'instant (voir phase 2).
+            var program = await _context.AcademicPrograms.IgnoreQueryFilters().FirstOrDefaultAsync(p => p.Id == programId.Value);
             if (program is null) return ("Programme introuvable.", null);
         }
 
@@ -233,7 +237,7 @@ public class StudentApplicantsController : ControllerBase
         return (null, null);
     }
 
-    private IQueryable<StudentApplicant> BaseQuery() => _context.StudentApplicants
+    private IQueryable<StudentApplicant> BaseQuery() => _context.StudentApplicants.IgnoreQueryFilters()
         .Include(a => a.AcademicYear)
         .Include(a => a.Program)
         .Include(a => a.AdmissionCampaign);

@@ -13,16 +13,18 @@ namespace GestionScolaire.Api.Controllers;
 public class ProgramsController : ControllerBase
 {
     private readonly IApplicationDbContext _context;
+    private readonly ICurrentUserService _currentUser;
 
-    public ProgramsController(IApplicationDbContext context)
+    public ProgramsController(IApplicationDbContext context, ICurrentUserService currentUser)
     {
         _context = context;
+        _currentUser = currentUser;
     }
 
     [HttpGet]
     public async Task<ActionResult<List<ProgramDto>>> GetAll()
     {
-        var programs = await _context.AcademicPrograms.IgnoreQueryFilters()
+        var programs = await _context.AcademicPrograms
             .Include(p => p.Classes)
             .Include(p => p.Courses)
             .OrderBy(p => p.Name)
@@ -35,7 +37,7 @@ public class ProgramsController : ControllerBase
     [HttpGet("{id:guid}")]
     public async Task<ActionResult<ProgramDto>> GetById(Guid id)
     {
-        var program = await _context.AcademicPrograms.IgnoreQueryFilters()
+        var program = await _context.AcademicPrograms
             .Include(p => p.Classes)
             .Include(p => p.Courses)
             .FirstOrDefaultAsync(p => p.Id == id);
@@ -53,7 +55,8 @@ public class ProgramsController : ControllerBase
         {
             Name = request.Name,
             Code = request.Code,
-            Description = request.Description
+            Description = request.Description,
+            SchoolId = _currentUser.SchoolId!.Value
         };
 
         _context.AcademicPrograms.Add(program);
@@ -66,7 +69,7 @@ public class ProgramsController : ControllerBase
     [Authorize(Roles = "Director")]
     public async Task<ActionResult<ProgramDto>> Update(Guid id, UpdateProgramRequest request)
     {
-        var program = await _context.AcademicPrograms.IgnoreQueryFilters()
+        var program = await _context.AcademicPrograms
             .Include(p => p.Classes)
             .Include(p => p.Courses)
             .FirstOrDefaultAsync(p => p.Id == id);

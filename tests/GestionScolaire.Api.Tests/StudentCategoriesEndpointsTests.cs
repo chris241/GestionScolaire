@@ -27,9 +27,11 @@ public class StudentCategoriesEndpointsTests
     }
 
     [Fact]
-    public async Task GetAll_ReturnsSeededCategories_ForAnyAuthenticatedRole()
+    public async Task GetAll_ReturnsSeededCategories_ForRoleWithSchoolContext()
     {
-        var client = await _factory.CreateClient().AsUserAsync("parent1@ecole.mg");
+        // StudentCategory est scopée par école : un Parent (sans contexte école) ne peut plus lister
+        // les catégories de référence, contrairement à un Enseignant rattaché à une école.
+        var client = await _factory.CreateClient().AsUserAsync("prof.math@ecole.mg");
 
         var categories = await client.GetFromJsonAsync<List<StudentCategoryDto>>("/api/studentcategories");
 

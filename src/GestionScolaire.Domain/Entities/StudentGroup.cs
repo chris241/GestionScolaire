@@ -11,6 +11,9 @@ public class StudentGroup : BaseEntity
     public Guid AcademicYearId { get; set; }
     public AcademicYear AcademicYear { get; set; } = null!;
 
+    public Guid SchoolId { get; set; }
+    public School School { get; set; } = null!;
+
     public Guid? ClassId { get; set; }
     public SchoolClass? Class { get; set; }
 

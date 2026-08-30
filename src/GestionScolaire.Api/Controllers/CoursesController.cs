@@ -22,7 +22,7 @@ public class CoursesController : ControllerBase
     [HttpGet]
     public async Task<ActionResult<List<CourseDto>>> GetAll([FromQuery] Guid? programId)
     {
-        var query = _context.Courses
+        var query = _context.Courses.IgnoreQueryFilters()
             .Include(c => c.Subject)
             .Include(c => c.Program)
             .Include(c => c.Topics)
@@ -39,7 +39,7 @@ public class CoursesController : ControllerBase
     [HttpGet("{id:guid}")]
     public async Task<ActionResult<CourseDto>> GetById(Guid id)
     {
-        var course = await _context.Courses
+        var course = await _context.Courses.IgnoreQueryFilters()
             .Include(c => c.Subject)
             .Include(c => c.Program)
             .Include(c => c.Topics)
@@ -79,7 +79,7 @@ public class CoursesController : ControllerBase
     [Authorize(Roles = "Director")]
     public async Task<ActionResult<CourseDto>> Update(Guid id, UpdateCourseRequest request)
     {
-        var course = await _context.Courses
+        var course = await _context.Courses.IgnoreQueryFilters()
             .Include(c => c.Subject)
             .Include(c => c.Program)
             .Include(c => c.Topics)
