@@ -63,7 +63,8 @@ public class AssessmentPlansController : ControllerBase
             ClassId = request.ClassId,
             AcademicTermId = request.AcademicTermId,
             AssessmentGroupId = request.AssessmentGroupId,
-            GradingScaleId = request.GradingScaleId
+            GradingScaleId = request.GradingScaleId,
+            SchoolId = _currentUser.SchoolId!.Value
         };
 
         _context.AssessmentPlans.Add(plan);
@@ -134,11 +135,11 @@ public class AssessmentPlansController : ControllerBase
     {
         if (_currentUser.Role != nameof(UserRole.Teacher)) return true;
 
-        return await _context.Classes.IgnoreQueryFilters().AnyAsync(c =>
+        return await _context.Classes.AnyAsync(c =>
             c.Id == classId && c.HomeroomTeacher != null && c.HomeroomTeacher.UserId == _currentUser.UserId);
     }
 
-    private IQueryable<AssessmentPlan> BaseQuery() => _context.AssessmentPlans.IgnoreQueryFilters()
+    private IQueryable<AssessmentPlan> BaseQuery() => _context.AssessmentPlans
         .Include(p => p.Course)
         .Include(p => p.Class)
         .Include(p => p.AcademicTerm)

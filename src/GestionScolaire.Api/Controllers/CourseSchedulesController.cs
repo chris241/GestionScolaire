@@ -1,6 +1,7 @@
 using GestionScolaire.Application.Common.Interfaces;
 using GestionScolaire.Application.DTOs.CourseSchedules;
 using GestionScolaire.Domain.Entities;
+using GestionScolaire.Domain.Enums;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -46,14 +47,19 @@ public class CourseSchedulesController : ControllerBase
     {
         if (!await HasAccessAsync(studentId)) return Forbid();
 
-        var student = await _context.Students.IgnoreQueryFilters().FirstOrDefaultAsync(s => s.Id == studentId);
+        // Un Parent (déjà vérifié ci-dessus via l'access policy) n'a pas de claim école. Pour tout autre
+        // rôle les filtres restent actifs : HasAccessAsync ne vérifie pas l'école pour un Directeur, ce
+        // sont les filtres Student/CourseSchedule qui referment la frontière multi-tenant ici.
+        var isParent = _currentUser.Role == nameof(UserRole.Parent);
+
+        var studentQuery = _context.Students.Where(s => s.Id == studentId);
+        if (isParent) studentQuery = studentQuery.IgnoreQueryFilters();
+        var student = await studentQuery.FirstOrDefaultAsync();
         if (student is null) return NotFound();
 
-        // Le Parent (sans claim école) accède au planning de son propre enfant, déjà vérifié ci-dessus.
-        var schedules = await BaseQuery().IgnoreQueryFilters()
-            .Where(s => s.ClassId == student.ClassId)
-            .OrderBy(s => s.DayOfWeek).ThenBy(s => s.StartTime)
-            .ToListAsync();
+        var scheduleQuery = BaseQuery().Where(s => s.ClassId == student.ClassId);
+        if (isParent) scheduleQuery = scheduleQuery.IgnoreQueryFilters();
+        var schedules = await scheduleQuery.OrderBy(s => s.DayOfWeek).ThenBy(s => s.StartTime).ToListAsync();
 
         return Ok(schedules.Select(ToDto));
     }

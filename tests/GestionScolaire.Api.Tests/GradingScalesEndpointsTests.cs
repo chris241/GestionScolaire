@@ -19,7 +19,9 @@ public class GradingScalesEndpointsTests
     [Fact]
     public async Task GetAll_ReturnsSeededDefaultScale_WithFiveIntervals()
     {
-        var client = await _factory.CreateClient().AsUserAsync("parent1@ecole.mg");
+        // GradingScale est scopée par école : un Parent (sans contexte école) ne peut plus la lister,
+        // contrairement à un Directeur, qui ne voit que le barème de son école active.
+        var client = await _factory.CreateClient().AsUserAsync("directeur@ecole.mg");
 
         var scales = await client.GetFromJsonAsync<List<GradingScaleDto>>("/api/gradingscales");
 

@@ -37,10 +37,15 @@ public class InvoicesController : ControllerBase
         if (!await _accessPolicy.CanAccessStudentAsync(_currentUser.UserId.Value, _currentUser.Role, studentId))
             return Forbid();
 
-        var invoices = await BaseQuery()
-            .Where(i => i.StudentId == studentId)
-            .OrderByDescending(i => i.DueDate)
-            .ToListAsync();
+        var query = BaseQuery().Where(i => i.StudentId == studentId);
+
+        // Un Parent (déjà vérifié ci-dessus via l'access policy) n'a pas de claim école. Pour tout autre
+        // rôle le filtre reste actif : CanAccessStudentAsync ne vérifie pas l'école pour un Directeur,
+        // c'est le filtre Student (via Class) qui referme la frontière multi-tenant ici.
+        if (_currentUser.Role == nameof(Domain.Enums.UserRole.Parent))
+            query = query.IgnoreQueryFilters();
+
+        var invoices = await query.OrderByDescending(i => i.DueDate).ToListAsync();
 
         return Ok(invoices.Select(ToDto));
     }
@@ -50,7 +55,7 @@ public class InvoicesController : ControllerBase
     [Authorize(Roles = "Director")]
     public async Task<ActionResult<List<StudentFeeCollectionDto>>> GetStudentCollectionReport([FromQuery] Guid? classId)
     {
-        var studentsQuery = _context.Students.IgnoreQueryFilters().Include(s => s.Class).Where(s => s.IsActive);
+        var studentsQuery = _context.Students.Include(s => s.Class).Where(s => s.IsActive);
         if (classId.HasValue)
             studentsQuery = studentsQuery.Where(s => s.ClassId == classId.Value);
 
@@ -107,7 +112,7 @@ public class InvoicesController : ControllerBase
         return Ok(result);
     }
 
-    private IQueryable<Domain.Entities.Invoice> BaseQuery() => _context.Invoices.IgnoreQueryFilters()
+    private IQueryable<Domain.Entities.Invoice> BaseQuery() => _context.Invoices
         .Include(i => i.Student)
         .Include(i => i.FeeSchedule).ThenInclude(s => s.AcademicTerm)
         .Include(i => i.FeeSchedule).ThenInclude(s => s.FeeStructure);

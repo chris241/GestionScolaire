@@ -2,6 +2,7 @@ using GestionScolaire.Application.Common.Interfaces;
 using GestionScolaire.Application.DTOs.Grades;
 using GestionScolaire.Application.Services;
 using GestionScolaire.Domain.Entities;
+using GestionScolaire.Domain.Enums;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -108,13 +109,15 @@ public class GradesController : ControllerBase
     {
         if (!await HasAccessAsync(studentId)) return Forbid();
 
-        // Peut être appelé par un Parent (sans claim école), déjà vérifié ci-dessus via l'access policy.
-        var grades = await _context.Grades.IgnoreQueryFilters()
-            .Include(g => g.Student)
-            .Include(g => g.Subject)
-            .Where(g => g.StudentId == studentId)
-            .OrderByDescending(g => g.EvaluatedAt)
-            .ToListAsync();
+        var query = _context.Grades.Include(g => g.Student).Include(g => g.Subject).Where(g => g.StudentId == studentId);
+
+        // Un Parent (sans claim école, déjà vérifié ci-dessus via l'access policy) n'a pas de contexte
+        // école — pour tout autre rôle, le filtre reste actif : HasAccessAsync ne vérifie pas l'école pour
+        // un Directeur, c'est le filtre Grade (via Class) qui referme la frontière multi-tenant ici.
+        if (_currentUser.Role == nameof(UserRole.Parent))
+            query = query.IgnoreQueryFilters();
+
+        var grades = await query.OrderByDescending(g => g.EvaluatedAt).ToListAsync();
 
         return Ok(grades.Select(g => ToDto(g, g.Student.FullName, g.Subject.Name)));
     }
@@ -127,7 +130,7 @@ public class GradesController : ControllerBase
         var student = await _context.Students.FindAsync(studentId);
         if (student is null) return NotFound();
 
-        var grades = await _context.Grades.IgnoreQueryFilters()
+        var grades = await _context.Grades
             .Include(g => g.Subject)
             .Where(g => g.StudentId == studentId)
             .ToListAsync();

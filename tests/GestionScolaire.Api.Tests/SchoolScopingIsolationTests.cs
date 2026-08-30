@@ -3,11 +3,15 @@ using GestionScolaire.Api.Tests.Helpers;
 using GestionScolaire.Application.DTOs.Admissions;
 using GestionScolaire.Application.DTOs.AcademicTerms;
 using GestionScolaire.Application.DTOs.AcademicYears;
+using GestionScolaire.Application.DTOs.AssessmentGroups;
+using GestionScolaire.Application.DTOs.AssessmentPlans;
 using GestionScolaire.Application.DTOs.Attendances;
 using GestionScolaire.Application.DTOs.Auth;
 using GestionScolaire.Application.DTOs.CourseEnrollments;
 using GestionScolaire.Application.DTOs.CourseSchedules;
 using GestionScolaire.Application.DTOs.Courses;
+using GestionScolaire.Application.DTOs.Grades;
+using GestionScolaire.Application.DTOs.GradingScales;
 using GestionScolaire.Application.DTOs.LeaveApplications;
 using GestionScolaire.Application.DTOs.ProgramEnrollments;
 using GestionScolaire.Application.DTOs.Programs;
@@ -26,9 +30,10 @@ namespace GestionScolaire.Api.Tests;
 /// et Student (via Class) sont désormais scopés par école. Phase 2 : StudentApplicant et AdmissionCampaign
 /// (avec le formulaire public /candidature qui précise désormais l'école visée). Phase 3 : Subject, Course,
 /// CourseSchedule, ProgramEnrollment, CourseEnrollment. Phase 4 : Attendance (via Class, sans colonne
-/// propre) et StudentLeaveApplication. Ces tests vérifient qu'un directeur tout juste inscrit, propriétaire
-/// d'une école fraîchement créée, ne voit jamais les données déjà seedées pour Lumière/Génie — c'est la
-/// garantie de sécurité la plus importante de ces phases.
+/// propre) et StudentLeaveApplication. Phase 5 : GradingScale, AssessmentGroup, AssessmentPlan (colonne
+/// propre) et Grade (via Class, sans colonne propre). Ces tests vérifient qu'un directeur tout juste
+/// inscrit, propriétaire d'une école fraîchement créée, ne voit jamais les données déjà seedées pour
+/// Lumière/Génie — c'est la garantie de sécurité la plus importante de ces phases.
 [Collection(ApiTestCollection.Name)]
 public class SchoolScopingIsolationTests
 {
@@ -306,5 +311,60 @@ public class SchoolScopingIsolationTests
         // Remet le directeur sur sa première école pour ne pas affecter les autres tests partageant la base.
         var lumiere = schools!.Single(s => s.Name == "Lumière");
         await client.PostAsJsonAsync("/api/auth/switch-school", new SwitchSchoolRequest(lumiere.Id));
+    }
+
+    [Fact]
+    public async Task NewSchool_NeverSeesSeededGradingScales()
+    {
+        var client = await RegisterDirectorWithFreshSchoolAsync();
+
+        var scales = await client.GetFromJsonAsync<List<GradingScaleDto>>("/api/gradingscales");
+
+        Assert.NotNull(scales);
+        Assert.DoesNotContain(scales!, s => s.Name == "Barème standard");
+    }
+
+    [Fact]
+    public async Task NewSchool_NeverSeesSeededAssessmentGroups()
+    {
+        var client = await RegisterDirectorWithFreshSchoolAsync();
+
+        var groups = await client.GetFromJsonAsync<List<AssessmentGroupDto>>("/api/assessmentgroups");
+
+        Assert.NotNull(groups);
+        Assert.DoesNotContain(groups!, g => g.Name is "Devoirs" or "Compositions");
+    }
+
+    [Fact]
+    public async Task NewSchool_NeverSeesSeededAssessmentPlans()
+    {
+        var client = await RegisterDirectorWithFreshSchoolAsync();
+
+        var plans = await client.GetFromJsonAsync<List<AssessmentPlanDto>>("/api/assessmentplans");
+
+        Assert.NotNull(plans);
+        Assert.Empty(plans!);
+    }
+
+    [Fact]
+    public async Task NewSchool_DirectorCannotSeeLumieresGrades_ByGuessingItsStudentId()
+    {
+        // Grade n'a pas sa propre colonne SchoolId (scopée via Class, comme Student/Attendance) : ce test
+        // vérifie spécifiquement que le filtre à un niveau protège bien même quand IStudentAccessPolicy
+        // laisse passer n'importe quel Directeur sans vérifier que l'élève appartient à son école active
+        // (c'est précisément la vulnérabilité corrigée en Phase 5 dans GetByStudent : un IgnoreQueryFilters()
+        // devenu inconditionnel combiné à ce laisser-passer permettait de fuiter les notes d'une autre école).
+        var lumiereDirector = await _factory.CreateClient().AsUserAsync("directeur@ecole.mg");
+        var lumiereStudents = await lumiereDirector.GetFromJsonAsync<List<StudentDto>>("/api/students");
+        var lumiereStudentId = lumiereStudents!.First().Id;
+
+        var client = await RegisterDirectorWithFreshSchoolAsync();
+
+        var response = await client.GetAsync($"/api/grades/student/{lumiereStudentId}");
+        response.EnsureSuccessStatusCode();
+        var grades = await response.Content.ReadFromJsonAsync<List<GradeDto>>();
+
+        Assert.NotNull(grades);
+        Assert.Empty(grades!);
     }
 }
