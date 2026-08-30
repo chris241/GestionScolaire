@@ -17,6 +17,10 @@ public record StudentApplicantDto(
     string LevelAppliedFor,
     Guid AcademicYearId,
     string AcademicYearName,
+    Guid? ProgramId,
+    string? ProgramName,
+    Guid? AdmissionCampaignId,
+    string? AdmissionCampaignName,
     DateTime AppliedDate,
     string Status,
     DateTime? DecisionDate,
@@ -35,7 +39,9 @@ public record CreateStudentApplicantRequest(
     string? GuardianEmail,
     string? GuardianPhone,
     [Required] string LevelAppliedFor,
-    [Required] Guid AcademicYearId
+    [Required] Guid AcademicYearId,
+    Guid? ProgramId,
+    Guid? AdmissionCampaignId
 );
 
 /// Formulaire de candidature public (sans authentification) : pas d'AcademicYearId (résolu côté serveur sur
@@ -50,7 +56,9 @@ public record PublicApplicantRequest(
     [Required] string GuardianName,
     [EmailAddress] string? GuardianEmail,
     [Required] string GuardianPhone,
-    [Required] string LevelAppliedFor
+    [Required] string LevelAppliedFor,
+    Guid? ProgramId,
+    Guid? AdmissionCampaignId
 );
 
 public record UpdateStudentApplicantStatusRequest([Required] AdmissionStatus Status, string? DecisionNotes);

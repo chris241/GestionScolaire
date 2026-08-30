@@ -24,6 +24,8 @@ public interface IApplicationDbContext
     DbSet<StudentLog> StudentLogs { get; }
     DbSet<TeacherLog> TeacherLogs { get; }
     DbSet<StudentApplicant> StudentApplicants { get; }
+    DbSet<AdmissionCampaign> AdmissionCampaigns { get; }
+    DbSet<AdmissionCampaignQuota> AdmissionCampaignQuotas { get; }
     DbSet<AcademicProgram> AcademicPrograms { get; }
     DbSet<Room> Rooms { get; }
     DbSet<Course> Courses { get; }

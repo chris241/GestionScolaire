@@ -195,11 +195,47 @@ export interface StudentApplicant {
   levelAppliedFor: string;
   academicYearId: string;
   academicYearName: string;
+  programId: string | null;
+  programName: string | null;
+  admissionCampaignId: string | null;
+  admissionCampaignName: string | null;
   appliedDate: string;
   status: AdmissionStatus;
   decisionDate: string | null;
   decisionNotes: string | null;
   convertedStudentId: string | null;
+}
+
+export interface AdmissionCampaignQuota {
+  id: string;
+  programId: string;
+  programName: string;
+  quota: number;
+  used: number;
+  remaining: number;
+}
+
+export interface AdmissionCampaign {
+  id: string;
+  name: string;
+  academicYearId: string;
+  academicYearName: string;
+  startDate: string;
+  endDate: string;
+  isOpen: boolean;
+  applicantCount: number;
+  quotas: AdmissionCampaignQuota[];
+}
+
+export interface OpenCampaignProgram {
+  id: string;
+  name: string;
+}
+
+export interface OpenAdmissionCampaign {
+  id: string;
+  name: string;
+  programs: OpenCampaignProgram[];
 }
 
 export interface Teacher {

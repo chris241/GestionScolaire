@@ -75,7 +75,7 @@ public class AdmissionsEndpointsTests
 
         var createResponse = await client.PostAsJsonAsync("/api/studentapplicants", new CreateStudentApplicantRequest(
             "Nouveau", "Candidat", new DateTime(2014, 5, 1), Gender.Masculin,
-            null, null, "Parent Test", null, "034 12 345 67", "6ème", currentYear.Id));
+            null, null, "Parent Test", null, "034 12 345 67", "6ème", currentYear.Id, null, null));
         createResponse.EnsureSuccessStatusCode();
         var created = await createResponse.Content.ReadFromJsonAsync<StudentApplicantDto>();
         Assert.Equal("Submitted", created!.Status);
@@ -108,7 +108,7 @@ public class AdmissionsEndpointsTests
 
         var createResponse = await client.PostAsJsonAsync("/api/studentapplicants", new CreateStudentApplicantRequest(
             "À Refuser", "Candidat", new DateTime(2014, 5, 1), Gender.Feminin,
-            null, null, null, null, null, "5ème", currentYear.Id));
+            null, null, null, null, null, "5ème", currentYear.Id, null, null));
         var created = await createResponse.Content.ReadFromJsonAsync<StudentApplicantDto>();
 
         var rejectResponse = await client.PostAsJsonAsync($"/api/studentapplicants/{created!.Id}/reject", "Dossier incomplet");
@@ -129,7 +129,7 @@ public class AdmissionsEndpointsTests
 
         var createResponse = await client.PostAsJsonAsync("/api/studentapplicants", new CreateStudentApplicantRequest(
             "Double", "Acceptation", new DateTime(2014, 5, 1), Gender.Masculin,
-            null, null, null, null, null, "6ème", currentYear.Id));
+            null, null, null, null, null, "6ème", currentYear.Id, null, null));
         var created = await createResponse.Content.ReadFromJsonAsync<StudentApplicantDto>();
 
         await client.PostAsJsonAsync($"/api/studentapplicants/{created!.Id}/accept", new AcceptApplicantRequest(classId, null));
