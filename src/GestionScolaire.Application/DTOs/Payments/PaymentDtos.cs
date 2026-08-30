@@ -11,6 +11,8 @@ public record PaymentDto(
     DateTime DueDate,
     DateTime? PaidAt,
     string Status,
+    string? Method,
+    string? DecisionNotes,
     Guid? InvoiceId = null
 );
 
@@ -25,3 +27,17 @@ public record CreatePaymentRequest(
     [Required] string Method,
     Guid? InvoiceId
 );
+
+/// Un Parent déclare avoir réglé un montant hors app (espèces remis à l'école, Mobile Money, virement) ;
+/// le paiement reste "en attente de validation" jusqu'à ce que le Directeur le confirme.
+public record DeclarePaymentRequest(
+    [Required] Guid StudentId,
+    [Required] string Description,
+    [Required] decimal Amount,
+    [Required] string AcademicYear,
+    [Required] string Term,
+    [Required] string Method,
+    Guid? InvoiceId
+);
+
+public record RejectPaymentRequest(string? DecisionNotes);

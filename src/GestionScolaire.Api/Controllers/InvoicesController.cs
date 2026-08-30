@@ -112,6 +112,27 @@ public class InvoicesController : ControllerBase
         return Ok(result);
     }
 
+    /// Retards de paiement : toutes les factures non payées dont l'échéance est déjà passée, triées des
+    /// plus en retard aux plus récentes.
+    [HttpGet("reports/overdue")]
+    [Authorize(Roles = "Director")]
+    public async Task<ActionResult<List<OverdueInvoiceDto>>> GetOverdueReport()
+    {
+        var today = DateTime.UtcNow.Date;
+
+        var invoices = await _context.Invoices
+            .Include(i => i.Student).ThenInclude(s => s.Class)
+            .Where(i => i.Status != Domain.Enums.PaymentStatus.Paye && i.DueDate < today)
+            .OrderBy(i => i.DueDate)
+            .ToListAsync();
+
+        var result = invoices.Select(i => new OverdueInvoiceDto(
+            i.Id, i.StudentId, i.Student.FullName, i.Student.Class.Name, i.InvoiceNumber,
+            i.TotalAmount, i.DueDate, (today - i.DueDate.Date).Days));
+
+        return Ok(result);
+    }
+
     private IQueryable<Domain.Entities.Invoice> BaseQuery() => _context.Invoices
         .Include(i => i.Student)
         .Include(i => i.FeeSchedule).ThenInclude(s => s.AcademicTerm)

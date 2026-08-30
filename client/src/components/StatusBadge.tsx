@@ -2,6 +2,7 @@ const STATUS_STYLES: Record<string, { label: string; className: string }> = {
   Paye: { label: 'Payé', className: 'bg-success-soft text-success' },
   Present: { label: 'Présent', className: 'bg-success-soft text-success' },
   EnAttente: { label: 'En attente', className: 'bg-warning-soft text-warning' },
+  EnValidation: { label: 'À valider', className: 'bg-warning-soft text-warning' },
   EnRetard: { label: 'En retard', className: 'bg-danger-soft text-danger' },
   Absent: { label: 'Absent', className: 'bg-danger-soft text-danger' },
   Annule: { label: 'Annulé', className: 'bg-border text-slate-soft' },

@@ -28,4 +28,8 @@ public record CreateFeeStructureItemRequest([Required] Guid FeeCategoryId, [Requ
 
 public record CreateFeeScheduleRequest([Required] Guid AcademicTermId, [Required] DateTime DueDate);
 
+public record GenerateMonthlySchedulesRequest([Required] Guid AcademicTermId, [Range(1, 28)] int DueDayOfMonth);
+
 public record GenerateInvoicesResult(int Created, int AlreadyExisted);
+
+public record GenerateMonthlySchedulesResult(int SchedulesCreated, int SchedulesAlreadyExisted, int InvoicesCreated);

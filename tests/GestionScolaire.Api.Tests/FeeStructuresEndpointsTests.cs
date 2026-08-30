@@ -87,6 +87,49 @@ public class FeeStructuresEndpointsTests
     }
 
     [Fact]
+    public async Task Director_CanGenerateMonthlySchedules_ForWholeTerm_Idempotently()
+    {
+        var client = await _factory.CreateClient().AsUserAsync("directeur@ecole.mg");
+
+        var years = await client.GetFromJsonAsync<List<AcademicYearDto>>("/api/academicyears");
+        var currentYear = years!.Single(y => y.IsCurrent);
+        var terms = await client.GetFromJsonAsync<List<GestionScolaire.Application.DTOs.AcademicTerms.AcademicTermDto>>(
+            $"/api/academicterms?academicYearId={currentYear.Id}");
+        // Trimestre 1 du seed va du 1er septembre au 19 décembre : 4 mois calendaires (sept./oct./nov./déc.).
+        var term = terms!.Single(t => t.Name == "Trimestre 1");
+        var categories = await client.GetFromJsonAsync<List<FeeCategoryDto>>("/api/feecategories");
+
+        var createResponse = await client.PostAsJsonAsync("/api/feestructures", new CreateFeeStructureRequest(
+            "Frais Mensuels Test", currentYear.Id, null));
+        createResponse.EnsureSuccessStatusCode();
+        var created = await createResponse.Content.ReadFromJsonAsync<FeeStructureDto>();
+
+        await client.PostAsJsonAsync($"/api/feestructures/{created!.Id}/items",
+            new CreateFeeStructureItemRequest(categories!.First().Id, 20000));
+
+        var firstResponse = await client.PostAsJsonAsync($"/api/feestructures/{created.Id}/schedules/monthly",
+            new GenerateMonthlySchedulesRequest(term.Id, 5));
+        firstResponse.EnsureSuccessStatusCode();
+        var firstResult = await firstResponse.Content.ReadFromJsonAsync<GenerateMonthlySchedulesResult>();
+
+        Assert.Equal(4, firstResult!.SchedulesCreated);
+        Assert.Equal(0, firstResult.SchedulesAlreadyExisted);
+        Assert.Equal(4 * 8, firstResult.InvoicesCreated);
+
+        var structures = await client.GetFromJsonAsync<List<FeeStructureDto>>("/api/feestructures");
+        Assert.Equal(4, structures!.Single(s => s.Id == created.Id).Schedules.Count);
+
+        // Idempotent au niveau du mois : relancer ne recrée aucune échéance.
+        var secondResponse = await client.PostAsJsonAsync($"/api/feestructures/{created.Id}/schedules/monthly",
+            new GenerateMonthlySchedulesRequest(term.Id, 5));
+        secondResponse.EnsureSuccessStatusCode();
+        var secondResult = await secondResponse.Content.ReadFromJsonAsync<GenerateMonthlySchedulesResult>();
+
+        Assert.Equal(0, secondResult!.SchedulesCreated);
+        Assert.Equal(4, secondResult.SchedulesAlreadyExisted);
+    }
+
+    [Fact]
     public async Task Teacher_CannotAccessFeeStructures()
     {
         var client = await _factory.CreateClient().AsUserAsync("prof.math@ecole.mg");

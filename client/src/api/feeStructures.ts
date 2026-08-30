@@ -47,3 +47,14 @@ export async function generateInvoices(scheduleId: string): Promise<{ created: n
   );
   return data;
 }
+
+export async function generateMonthlySchedules(
+  structureId: string,
+  request: { academicTermId: string; dueDayOfMonth: number }
+): Promise<{ schedulesCreated: number; schedulesAlreadyExisted: number; invoicesCreated: number }> {
+  const { data } = await apiClient.post<{ schedulesCreated: number; schedulesAlreadyExisted: number; invoicesCreated: number }>(
+    `/feestructures/${structureId}/schedules/monthly`,
+    request
+  );
+  return data;
+}

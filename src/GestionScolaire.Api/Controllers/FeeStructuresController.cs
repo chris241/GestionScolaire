@@ -125,9 +125,68 @@ public class FeeStructuresController : ControllerBase
 
         if (schedule is null) return NotFound(new { message = "Échéance introuvable." });
 
-        var totalAmount = schedule.FeeStructure.Items.Sum(i => i.Amount);
-        if (totalAmount <= 0)
+        if (schedule.FeeStructure.Items.Sum(i => i.Amount) <= 0)
             return BadRequest(new { message = "La structure de frais ne comporte aucun élément facturable." });
+
+        var (created, alreadyExisted) = await GenerateInvoicesForScheduleAsync(schedule);
+        await _context.SaveChangesAsync();
+        return Ok(new GenerateInvoicesResult(created, alreadyExisted));
+    }
+
+    /// Outil de génération en masse pour les frais mensuels : crée une échéance (et ses factures) pour
+    /// chaque mois calendaire du trimestre choisi, en une seule requête. Idempotent au niveau du mois :
+    /// un mois qui a déjà son échéance n'est pas dupliqué, la génération de factures l'est déjà en soi.
+    [HttpPost("{id:guid}/schedules/monthly")]
+    public async Task<ActionResult<GenerateMonthlySchedulesResult>> GenerateMonthlySchedules(Guid id, GenerateMonthlySchedulesRequest request)
+    {
+        var structure = await _context.FeeStructures
+            .Include(s => s.Items)
+            .FirstOrDefaultAsync(s => s.Id == id);
+        var term = await _context.AcademicTerms.FindAsync(request.AcademicTermId);
+        if (structure is null || term is null) return NotFound(new { message = "Structure ou trimestre introuvable." });
+
+        if (structure.Items.Sum(i => i.Amount) <= 0)
+            return BadRequest(new { message = "La structure de frais ne comporte aucun élément facturable." });
+
+        var existingMonths = await _context.FeeSchedules
+            .Where(s => s.FeeStructureId == id && s.AcademicTermId == request.AcademicTermId)
+            .Select(s => new { s.DueDate.Year, s.DueDate.Month })
+            .ToListAsync();
+
+        var schedulesCreated = 0;
+        var invoicesCreated = 0;
+        var cursor = new DateTime(term.StartDate.Year, term.StartDate.Month, 1, 0, 0, 0, DateTimeKind.Utc);
+
+        while (cursor <= term.EndDate)
+        {
+            if (!existingMonths.Any(m => m.Year == cursor.Year && m.Month == cursor.Month))
+            {
+                var dueDay = Math.Min(request.DueDayOfMonth, DateTime.DaysInMonth(cursor.Year, cursor.Month));
+                var schedule = new FeeSchedule
+                {
+                    FeeStructureId = id,
+                    AcademicTermId = request.AcademicTermId,
+                    DueDate = new DateTime(cursor.Year, cursor.Month, dueDay, 0, 0, 0, DateTimeKind.Utc)
+                };
+                _context.FeeSchedules.Add(schedule);
+                schedulesCreated++;
+
+                schedule.FeeStructure = structure;
+                var (created, _) = await GenerateInvoicesForScheduleAsync(schedule);
+                invoicesCreated += created;
+            }
+
+            cursor = cursor.AddMonths(1);
+        }
+
+        await _context.SaveChangesAsync();
+
+        return Ok(new GenerateMonthlySchedulesResult(schedulesCreated, existingMonths.Count, invoicesCreated));
+    }
+
+    private async Task<(int Created, int AlreadyExisted)> GenerateInvoicesForScheduleAsync(FeeSchedule schedule)
+    {
+        var totalAmount = schedule.FeeStructure.Items.Sum(i => i.Amount);
 
         var studentsQuery = _context.Students.Where(s => s.IsActive);
 
@@ -143,7 +202,7 @@ public class FeeStructuresController : ControllerBase
         var students = await studentsQuery.ToListAsync();
 
         var existingStudentIds = await _context.Invoices
-            .Where(i => i.FeeScheduleId == scheduleId)
+            .Where(i => i.FeeScheduleId == schedule.Id)
             .Select(i => i.StudentId)
             .ToListAsync();
 
@@ -153,18 +212,16 @@ public class FeeStructuresController : ControllerBase
         {
             _context.Invoices.Add(new Invoice
             {
-                StudentId = student.Id,
-                FeeScheduleId = scheduleId,
+                Student = student,
+                FeeSchedule = schedule,
                 SchoolId = _currentUser.SchoolId!.Value,
-                InvoiceNumber = $"FAC-{schedule.Id.ToString()[..8].ToUpperInvariant()}-{student.EnrollmentNumber}",
+                InvoiceNumber = $"FAC-{schedule.DueDate:yyyyMM}-{student.EnrollmentNumber}",
                 TotalAmount = totalAmount,
                 DueDate = schedule.DueDate
             });
         }
 
-        await _context.SaveChangesAsync();
-
-        return Ok(new GenerateInvoicesResult(toCreate.Count, existingStudentIds.Count));
+        return (toCreate.Count, existingStudentIds.Count);
     }
 
     private IQueryable<FeeStructure> BaseQuery() => _context.FeeStructures
