@@ -36,6 +36,9 @@ public class LeaveApplicationsController : ControllerBase
 
         if (_currentUser.Role == nameof(UserRole.Parent))
         {
+            // Un Parent n'a pas de claim école : son accès reste scopé élève par élève via StudentParent.
+            query = query.IgnoreQueryFilters();
+
             var childIds = _context.StudentParents
                 .Where(sp => sp.ParentUserId == _currentUser.UserId)
                 .Select(sp => sp.StudentId);
@@ -44,7 +47,7 @@ public class LeaveApplicationsController : ControllerBase
         }
         else if (_currentUser.Role == nameof(UserRole.Teacher))
         {
-            var teacherClassIds = _context.Classes.IgnoreQueryFilters()
+            var teacherClassIds = _context.Classes
                 .Where(c => c.HomeroomTeacher != null && c.HomeroomTeacher.UserId == _currentUser.UserId)
                 .Select(c => c.Id);
 
@@ -61,7 +64,8 @@ public class LeaveApplicationsController : ControllerBase
     {
         if (!await HasAccessAsync(studentId)) return Forbid();
 
-        var applications = await BaseQuery()
+        // Peut être appelé par un Parent (sans claim école), déjà vérifié ci-dessus via l'access policy.
+        var applications = await BaseQuery().IgnoreQueryFilters()
             .Where(l => l.StudentId == studentId)
             .OrderByDescending(l => l.CreatedAt)
             .ToListAsync();
@@ -79,8 +83,17 @@ public class LeaveApplicationsController : ControllerBase
         if (request.EndDate < request.StartDate)
             return BadRequest(new { message = "La date de fin doit être postérieure à la date de début." });
 
+        // Résolu via l'élève (pas via la claim école de l'appelant) : un Parent n'a pas de contexte
+        // école, mais son enfant en a un via sa classe.
+        var schoolId = await _context.Students.IgnoreQueryFilters()
+            .Where(s => s.Id == request.StudentId)
+            .Select(s => (Guid?)s.Class.SchoolId)
+            .FirstOrDefaultAsync();
+        if (schoolId is null) return NotFound(new { message = "Élève introuvable." });
+
         var application = new StudentLeaveApplication
         {
+            SchoolId = schoolId.Value,
             StudentId = request.StudentId,
             StartDate = request.StartDate.AsUtc().Date,
             EndDate = request.EndDate.AsUtc().Date,
@@ -91,7 +104,7 @@ public class LeaveApplicationsController : ControllerBase
         _context.StudentLeaveApplications.Add(application);
         await _context.SaveChangesAsync();
 
-        var full = await BaseQuery().FirstAsync(l => l.Id == application.Id);
+        var full = await BaseQuery().IgnoreQueryFilters().FirstAsync(l => l.Id == application.Id);
         return Ok(ToDto(full));
     }
 
@@ -118,7 +131,7 @@ public class LeaveApplicationsController : ControllerBase
         return await _accessPolicy.CanAccessStudentAsync(_currentUser.UserId.Value, _currentUser.Role, studentId);
     }
 
-    private IQueryable<StudentLeaveApplication> BaseQuery() => _context.StudentLeaveApplications.IgnoreQueryFilters().Include(l => l.Student);
+    private IQueryable<StudentLeaveApplication> BaseQuery() => _context.StudentLeaveApplications.Include(l => l.Student);
 
     private static LeaveApplicationDto ToDto(StudentLeaveApplication l) => new(
         l.Id, l.StudentId, l.Student.FullName, l.StartDate, l.EndDate, l.Reason,

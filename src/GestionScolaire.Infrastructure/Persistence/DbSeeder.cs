@@ -421,6 +421,7 @@ public static class DbSeeder
             new StudentLeaveApplication
             {
                 Student = students[2],
+                School = schoolLumiere,
                 StartDate = DateTime.UtcNow.Date.AddDays(3),
                 EndDate = DateTime.UtcNow.Date.AddDays(5),
                 Reason = "Consultation médicale programmée.",
@@ -430,6 +431,7 @@ public static class DbSeeder
             new StudentLeaveApplication
             {
                 Student = students[4],
+                School = schoolLumiere,
                 StartDate = DateTime.UtcNow.Date.AddDays(-10),
                 EndDate = DateTime.UtcNow.Date.AddDays(-8),
                 Reason = "Voyage familial.",

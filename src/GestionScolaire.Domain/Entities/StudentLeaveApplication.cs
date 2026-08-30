@@ -5,6 +5,9 @@ namespace GestionScolaire.Domain.Entities;
 
 public class StudentLeaveApplication : BaseEntity
 {
+    public Guid SchoolId { get; set; }
+    public School School { get; set; } = null!;
+
     public Guid StudentId { get; set; }
     public Student Student { get; set; } = null!;
 
