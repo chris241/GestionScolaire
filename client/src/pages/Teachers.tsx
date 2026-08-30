@@ -1,7 +1,8 @@
 import { useEffect, useState, type FormEvent } from 'react';
-import { fetchTeachers, createTeacher } from '../api/teachers';
+import { fetchTeachers, createTeacher, linkTeacherToSchool, unlinkTeacherFromSchool } from '../api/teachers';
 import { fetchTeacherLogs, createTeacherLog, deleteTeacherLog } from '../api/teacherLogs';
-import type { Teacher, TeacherLog } from '../types';
+import { fetchSchools } from '../api/schools';
+import type { School, Teacher, TeacherLog } from '../types';
 
 const inputClass =
   'rounded-xl border border-border bg-bg px-3.5 py-2.5 text-sm text-slate outline-none focus:border-primary focus:ring-2 focus:ring-primary/20';
@@ -27,11 +28,16 @@ export function Teachers() {
   const [logForm, setLogForm] = useState(emptyLogForm);
   const [savingLog, setSavingLog] = useState(false);
 
+  const [schools, setSchools] = useState<School[]>([]);
+  const [schoolToAdd, setSchoolToAdd] = useState('');
+  const [savingSchool, setSavingSchool] = useState(false);
+
   useEffect(() => {
     fetchTeachers()
       .then(setTeachers)
       .catch(() => setError('Impossible de charger les enseignants.'))
       .finally(() => setLoading(false));
+    fetchSchools().then(setSchools).catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -89,7 +95,39 @@ export function Teachers() {
     }
   }
 
+  async function handleAddSchool(event: FormEvent) {
+    event.preventDefault();
+    if (!selectedTeacherId || !schoolToAdd) return;
+    setSavingSchool(true);
+    setError(null);
+    try {
+      const updated = await linkTeacherToSchool(selectedTeacherId, schoolToAdd);
+      setTeachers((prev) => prev.map((t) => (t.id === selectedTeacherId ? updated : t)));
+      setSchoolToAdd('');
+    } catch {
+      setError("Impossible de rattacher cet enseignant à cette école.");
+    } finally {
+      setSavingSchool(false);
+    }
+  }
+
+  async function handleRemoveSchool(schoolId: string) {
+    if (!selectedTeacherId) return;
+    setError(null);
+    try {
+      await unlinkTeacherFromSchool(selectedTeacherId, schoolId);
+      setTeachers((prev) =>
+        prev.map((t) =>
+          t.id === selectedTeacherId ? { ...t, schools: t.schools.filter((s) => s.id !== schoolId) } : t
+        )
+      );
+    } catch {
+      setError("Impossible de retirer cette école (un enseignant doit garder au moins une école).");
+    }
+  }
+
   const selectedTeacher = teachers.find((t) => t.id === selectedTeacherId);
+  const schoolsToAdd = schools.filter((s) => !selectedTeacher?.schools.some((ts) => ts.id === s.id));
 
   return (
     <div className="mx-auto max-w-5xl px-6 py-8">
@@ -120,9 +158,66 @@ export function Teachers() {
               >
                 <p className="text-sm font-medium text-slate">{t.fullName}</p>
                 <p className="text-xs text-slate-soft">{t.specialty} · {t.email} · embauché le {formatDate(t.hireDate)}</p>
+                {t.schools.length > 1 && (
+                  <div className="mt-1.5 flex flex-wrap gap-1">
+                    {t.schools.map((s) => (
+                      <span key={s.id} className="rounded-full bg-primary-soft px-2 py-0.5 text-[11px] font-medium text-primary">
+                        {s.name}
+                      </span>
+                    ))}
+                  </div>
+                )}
               </button>
             ))}
           </div>
+
+          {selectedTeacher && (
+            <div className="mt-4 border-t border-border pt-4">
+              <h3 className="text-sm font-semibold text-slate">Écoles de « {selectedTeacher.fullName} »</h3>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {selectedTeacher.schools.map((s) => (
+                  <span
+                    key={s.id}
+                    className="flex items-center gap-1.5 rounded-full border border-border bg-bg px-3 py-1 text-xs font-medium text-slate"
+                  >
+                    {s.name}
+                    {selectedTeacher.schools.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveSchool(s.id)}
+                        aria-label={`Retirer ${s.name}`}
+                        className="text-slate-soft hover:text-danger"
+                      >
+                        ×
+                      </button>
+                    )}
+                  </span>
+                ))}
+              </div>
+              {schoolsToAdd.length > 0 && (
+                <form onSubmit={handleAddSchool} className="mt-3 flex items-center gap-2">
+                  <select
+                    required
+                    value={schoolToAdd}
+                    onChange={(e) => setSchoolToAdd(e.target.value)}
+                    className={inputClass}
+                  >
+                    <option value="">École...</option>
+                    {schoolsToAdd.map((s) => (
+                      <option key={s.id} value={s.id}>{s.name}</option>
+                    ))}
+                  </select>
+                  <button
+                    type="submit"
+                    disabled={savingSchool}
+                    className="rounded-xl bg-primary px-3.5 py-2.5 text-xs font-medium text-white shadow-sm transition-colors hover:bg-primary-hover disabled:opacity-60"
+                  >
+                    {savingSchool ? 'Ajout...' : 'Rattacher'}
+                  </button>
+                </form>
+              )}
+            </div>
+          )}
 
           {selectedTeacher && (
             <div className="mt-4 border-t border-border pt-4">

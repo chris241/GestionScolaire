@@ -248,12 +248,18 @@ export interface OpenAdmissionCampaign {
   programs: OpenCampaignProgram[];
 }
 
+export interface TeacherSchoolSummary {
+  id: string;
+  name: string;
+}
+
 export interface Teacher {
   id: string;
   fullName: string;
   specialty: string;
   email: string;
   hireDate: string;
+  schools: TeacherSchoolSummary[];
 }
 
 export interface Program {
