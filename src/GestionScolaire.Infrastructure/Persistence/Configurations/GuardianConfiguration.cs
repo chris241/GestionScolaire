@@ -16,6 +16,7 @@ public class GuardianConfiguration : IEntityTypeConfiguration<Guardian>
         builder.Property(g => g.Phone).IsRequired().HasMaxLength(30);
         builder.Property(g => g.Email).HasMaxLength(256);
         builder.Property(g => g.Occupation).HasMaxLength(100);
+        builder.Property(g => g.AreasOfInterest).HasMaxLength(500);
     }
 }
 

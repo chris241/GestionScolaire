@@ -54,7 +54,7 @@ public class GuardiansEndpointsTests
         var target = students!.Single(s => s.EnrollmentNumber == "MAT-2026-002");
 
         var createResponse = await client.PostAsJsonAsync("/api/guardians", new CreateGuardianRequest(
-            "Test", "Tuteur", "034 00 000 00", null, null));
+            "Test", "Tuteur", "034 00 000 00", null, null, null));
         createResponse.EnsureSuccessStatusCode();
         var guardian = await createResponse.Content.ReadFromJsonAsync<GuardianDto>();
 
@@ -77,12 +77,35 @@ public class GuardiansEndpointsTests
     }
 
     [Fact]
+    public async Task Director_CanSetAndClearGuardianInterests()
+    {
+        var client = await _factory.CreateClient().AsUserAsync("directeur@ecole.mg");
+
+        var createResponse = await client.PostAsJsonAsync("/api/guardians", new CreateGuardianRequest(
+            "Interet", "Tuteur", "034 00 000 00", null, null, null));
+        var guardian = await createResponse.Content.ReadFromJsonAsync<GuardianDto>();
+        Assert.Null(guardian!.AreasOfInterest);
+
+        var updateResponse = await client.PutAsJsonAsync($"/api/guardians/{guardian.Id}/interests",
+            new UpdateGuardianInterestsRequest("Bénévolat, comité des fêtes"));
+        updateResponse.EnsureSuccessStatusCode();
+        var updated = await updateResponse.Content.ReadFromJsonAsync<GuardianDto>();
+        Assert.Equal("Bénévolat, comité des fêtes", updated!.AreasOfInterest);
+
+        var clearResponse = await client.PutAsJsonAsync($"/api/guardians/{guardian.Id}/interests",
+            new UpdateGuardianInterestsRequest(null));
+        clearResponse.EnsureSuccessStatusCode();
+        var cleared = await clearResponse.Content.ReadFromJsonAsync<GuardianDto>();
+        Assert.Null(cleared!.AreasOfInterest);
+    }
+
+    [Fact]
     public async Task Teacher_CannotCreateGuardian()
     {
         var client = await _factory.CreateClient().AsUserAsync("prof.math@ecole.mg");
 
         var response = await client.PostAsJsonAsync("/api/guardians", new CreateGuardianRequest(
-            "Interdit", "Test", "034 00 000 00", null, null));
+            "Interdit", "Test", "034 00 000 00", null, null, null));
 
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
     }

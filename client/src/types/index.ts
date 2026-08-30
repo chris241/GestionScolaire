@@ -29,6 +29,22 @@ export interface Payment {
   invoiceId: string | null;
 }
 
+export interface StudentImportRowResult {
+  rowNumber: number;
+  success: boolean;
+  firstName: string;
+  lastName: string;
+  studentId: string | null;
+  errorMessage: string | null;
+}
+
+export interface StudentImportResult {
+  totalRows: number;
+  successCount: number;
+  errorCount: number;
+  rows: StudentImportRowResult[];
+}
+
 export interface Student {
   id: string;
   enrollmentNumber: string;
@@ -457,6 +473,7 @@ export interface Guardian {
   phone: string;
   email: string | null;
   occupation: string | null;
+  areasOfInterest: string | null;
 }
 
 export interface StudentGuardianLink {
@@ -466,6 +483,7 @@ export interface StudentGuardianLink {
   phone: string;
   email: string | null;
   occupation: string | null;
+  areasOfInterest: string | null;
   relationship: string;
   isPrimaryContact: boolean;
 }

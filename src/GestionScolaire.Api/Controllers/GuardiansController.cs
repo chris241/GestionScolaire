@@ -29,7 +29,7 @@ public class GuardiansController : ControllerBase
     {
         var guardians = await _context.Guardians
             .OrderBy(g => g.LastName)
-            .Select(g => new GuardianDto(g.Id, g.FirstName, g.LastName, g.FullName, g.Phone, g.Email, g.Occupation))
+            .Select(g => new GuardianDto(g.Id, g.FirstName, g.LastName, g.FullName, g.Phone, g.Email, g.Occupation, g.AreasOfInterest))
             .ToListAsync();
 
         return Ok(guardians);
@@ -45,13 +45,27 @@ public class GuardiansController : ControllerBase
             LastName = request.LastName,
             Phone = request.Phone,
             Email = request.Email,
-            Occupation = request.Occupation
+            Occupation = request.Occupation,
+            AreasOfInterest = request.AreasOfInterest
         };
 
         _context.Guardians.Add(guardian);
         await _context.SaveChangesAsync();
 
-        return Ok(new GuardianDto(guardian.Id, guardian.FirstName, guardian.LastName, guardian.FullName, guardian.Phone, guardian.Email, guardian.Occupation));
+        return Ok(new GuardianDto(guardian.Id, guardian.FirstName, guardian.LastName, guardian.FullName, guardian.Phone, guardian.Email, guardian.Occupation, guardian.AreasOfInterest));
+    }
+
+    [HttpPut("{id:guid}/interests")]
+    [Authorize(Roles = "Director")]
+    public async Task<ActionResult<GuardianDto>> UpdateInterests(Guid id, UpdateGuardianInterestsRequest request)
+    {
+        var guardian = await _context.Guardians.FindAsync(id);
+        if (guardian is null) return NotFound();
+
+        guardian.AreasOfInterest = request.AreasOfInterest;
+        await _context.SaveChangesAsync();
+
+        return Ok(new GuardianDto(guardian.Id, guardian.FirstName, guardian.LastName, guardian.FullName, guardian.Phone, guardian.Email, guardian.Occupation, guardian.AreasOfInterest));
     }
 
     [HttpDelete("{id:guid}")]
@@ -77,7 +91,7 @@ public class GuardiansController : ControllerBase
             .Where(sg => sg.StudentId == studentId)
             .OrderByDescending(sg => sg.IsPrimaryContact)
             .Select(sg => new StudentGuardianDto(
-                sg.Id, sg.GuardianId, sg.Guardian.FullName, sg.Guardian.Phone, sg.Guardian.Email, sg.Guardian.Occupation,
+                sg.Id, sg.GuardianId, sg.Guardian.FullName, sg.Guardian.Phone, sg.Guardian.Email, sg.Guardian.Occupation, sg.Guardian.AreasOfInterest,
                 sg.Relationship, sg.IsPrimaryContact))
             .ToListAsync();
 
@@ -106,7 +120,7 @@ public class GuardiansController : ControllerBase
         _context.StudentGuardians.Add(link);
         await _context.SaveChangesAsync();
 
-        return Ok(new StudentGuardianDto(link.Id, guardian.Id, guardian.FullName, guardian.Phone, guardian.Email, guardian.Occupation, link.Relationship, link.IsPrimaryContact));
+        return Ok(new StudentGuardianDto(link.Id, guardian.Id, guardian.FullName, guardian.Phone, guardian.Email, guardian.Occupation, guardian.AreasOfInterest, link.Relationship, link.IsPrimaryContact));
     }
 
     [HttpDelete("{guardianId:guid}/students/{studentId:guid}")]

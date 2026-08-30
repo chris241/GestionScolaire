@@ -12,8 +12,14 @@ export async function createGuardian(request: {
   phone: string;
   email: string | null;
   occupation: string | null;
+  areasOfInterest: string | null;
 }): Promise<Guardian> {
   const { data } = await apiClient.post<Guardian>('/guardians', request);
+  return data;
+}
+
+export async function updateGuardianInterests(guardianId: string, areasOfInterest: string | null): Promise<Guardian> {
+  const { data } = await apiClient.put<Guardian>(`/guardians/${guardianId}/interests`, { areasOfInterest });
   return data;
 }
 

@@ -1,13 +1,14 @@
-import { useEffect, useState, type FormEvent } from 'react';
-import { fetchStudents, fetchSiblings, addSibling, removeSibling } from '../api/students';
+import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from 'react';
+import { fetchStudents, fetchSiblings, addSibling, removeSibling, importStudents } from '../api/students';
 import {
   fetchGuardians,
   createGuardian,
   fetchStudentGuardians,
   linkGuardianToStudent,
   unlinkGuardianFromStudent,
+  updateGuardianInterests,
 } from '../api/guardians';
-import type { Guardian, Sibling, Student, StudentGuardianLink } from '../types';
+import type { Guardian, Sibling, Student, StudentGuardianLink, StudentImportResult } from '../types';
 import { useAuth } from '../lib/AuthContext';
 
 const inputClass =
@@ -27,6 +28,9 @@ export function Students() {
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
+  const [importResult, setImportResult] = useState<StudentImportResult | null>(null);
+  const [importing, setImporting] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -49,6 +53,27 @@ export function Students() {
 
   const selectedStudent = students.find((s) => s.id === selectedStudentId) ?? null;
 
+  async function handleImportFile(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setImporting(true);
+    setError(null);
+    setImportResult(null);
+    try {
+      const result = await importStudents(file);
+      setImportResult(result);
+      if (result.successCount > 0) {
+        setStudents(await fetchStudents());
+      }
+    } catch {
+      setError("Impossible d'importer ce fichier.");
+    } finally {
+      setImporting(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  }
+
   return (
     <div className="mx-auto max-w-7xl px-6 py-8">
       <div className="flex items-center justify-between">
@@ -65,18 +90,69 @@ export function Students() {
           </p>
         </div>
         {!isParent && (
-          <input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Rechercher un élève..."
-            className="w-64 rounded-xl border border-border bg-surface px-3.5 py-2.5 text-sm text-slate outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
-          />
+          <div className="flex items-center gap-3">
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Rechercher un élève..."
+              className="w-64 rounded-xl border border-border bg-surface px-3.5 py-2.5 text-sm text-slate outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+            />
+            {isDirector && (
+              <>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".csv,text/csv"
+                  onChange={handleImportFile}
+                  className="hidden"
+                  id="student-import-input"
+                />
+                <label
+                  htmlFor="student-import-input"
+                  className={`cursor-pointer rounded-xl border border-primary px-4 py-2.5 text-sm font-medium text-primary transition-colors hover:bg-primary-soft ${
+                    importing ? 'pointer-events-none opacity-60' : ''
+                  }`}
+                >
+                  {importing ? 'Import...' : 'Importer (CSV)'}
+                </label>
+              </>
+            )}
+          </div>
         )}
       </div>
+
+      {isDirector && (
+        <p className="mt-2 text-xs text-slate-soft">
+          Colonnes attendues : FirstName,LastName,DateOfBirth (AAAA-MM-JJ),Gender (Masculin/Feminin),ClassName,EnrollmentNumber (optionnel).
+        </p>
+      )}
 
       {error && (
         <div className="mt-6 rounded-xl border border-danger/20 bg-danger-soft px-4 py-3 text-sm text-danger">
           {error}
+        </div>
+      )}
+
+      {importResult && (
+        <div className="mt-6 rounded-2xl border border-border bg-surface p-6 shadow-sm">
+          <div className="flex items-center justify-between">
+            <h2 className="text-base font-semibold text-slate">Résultat de l'import</h2>
+            <button type="button" onClick={() => setImportResult(null)} className="text-xs font-medium text-slate-soft hover:text-slate">
+              Fermer
+            </button>
+          </div>
+          <p className="mt-1 text-sm text-slate-soft">
+            {importResult.totalRows} ligne(s) · {importResult.successCount} importée(s) · {importResult.errorCount} en échec
+          </p>
+          {importResult.errorCount > 0 && (
+            <div className="mt-3 flex flex-col gap-1.5">
+              {importResult.rows.filter((r) => !r.success).map((r) => (
+                <p key={r.rowNumber} className="text-xs text-danger">
+                  Ligne {r.rowNumber} ({r.firstName} {r.lastName}) : {r.errorMessage}
+                </p>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
@@ -153,7 +229,9 @@ function StudentDetailPanel({
   const [error, setError] = useState<string | null>(null);
 
   const [linkForm, setLinkForm] = useState({ guardianId: '', relationship: '', isPrimaryContact: false });
-  const [newGuardianForm, setNewGuardianForm] = useState({ firstName: '', lastName: '', phone: '', email: '', occupation: '', relationship: '' });
+  const [newGuardianForm, setNewGuardianForm] = useState({ firstName: '', lastName: '', phone: '', email: '', occupation: '', areasOfInterest: '', relationship: '' });
+  const [interestDrafts, setInterestDrafts] = useState<Record<string, string>>({});
+  const [savingInterest, setSavingInterest] = useState<string | null>(null);
   const [savingLink, setSavingLink] = useState(false);
   const [savingNewGuardian, setSavingNewGuardian] = useState(false);
 
@@ -208,6 +286,7 @@ function StudentDetailPanel({
         phone: newGuardianForm.phone,
         email: newGuardianForm.email || null,
         occupation: newGuardianForm.occupation || null,
+        areasOfInterest: newGuardianForm.areasOfInterest || null,
       });
       await linkGuardianToStudent(created.id, student.id, {
         relationship: newGuardianForm.relationship,
@@ -215,11 +294,27 @@ function StudentDetailPanel({
       });
       setGuardians((prev) => [...prev, created]);
       await refreshGuardianLinks();
-      setNewGuardianForm({ firstName: '', lastName: '', phone: '', email: '', occupation: '', relationship: '' });
+      setNewGuardianForm({ firstName: '', lastName: '', phone: '', email: '', occupation: '', areasOfInterest: '', relationship: '' });
     } catch {
       setError('Impossible de créer ce tuteur.');
     } finally {
       setSavingNewGuardian(false);
+    }
+  }
+
+  async function handleSaveInterest(guardianId: string, currentValue: string | null) {
+    const draft = interestDrafts[guardianId] ?? currentValue ?? '';
+    if (draft === (currentValue ?? '')) return;
+
+    setSavingInterest(guardianId);
+    setError(null);
+    try {
+      await updateGuardianInterests(guardianId, draft || null);
+      setLinks((prev) => prev.map((l) => (l.guardianId === guardianId ? { ...l, areasOfInterest: draft || null } : l)));
+    } catch {
+      setError("Impossible d'enregistrer les centres d'intérêt.");
+    } finally {
+      setSavingInterest(null);
     }
   }
 
@@ -297,6 +392,18 @@ function StudentDetailPanel({
               <p className="mt-1 text-xs text-slate-soft">
                 {link.relationship} · {link.phone}{link.email ? ` · ${link.email}` : ''}{link.occupation ? ` · ${link.occupation}` : ''}
               </p>
+              {isDirector ? (
+                <input
+                  placeholder="Centres d'intérêt (bénévolat, comité...)"
+                  value={interestDrafts[link.guardianId] ?? link.areasOfInterest ?? ''}
+                  onChange={(e) => setInterestDrafts((prev) => ({ ...prev, [link.guardianId]: e.target.value }))}
+                  onBlur={() => handleSaveInterest(link.guardianId, link.areasOfInterest)}
+                  disabled={savingInterest === link.guardianId}
+                  className={`${inputClass} mt-2 w-full py-1.5 text-xs`}
+                />
+              ) : (
+                link.areasOfInterest && <p className="mt-1 text-xs text-slate-soft">Intérêts : {link.areasOfInterest}</p>
+              )}
             </div>
           ))}
         </div>
@@ -334,6 +441,7 @@ function StudentDetailPanel({
                 <input required placeholder="Relation (ex: Mère)" value={newGuardianForm.relationship} onChange={(e) => setNewGuardianForm({ ...newGuardianForm, relationship: e.target.value })} className={inputClass} />
                 <input type="email" placeholder="Email (optionnel)" value={newGuardianForm.email} onChange={(e) => setNewGuardianForm({ ...newGuardianForm, email: e.target.value })} className={inputClass} />
                 <input placeholder="Profession (optionnel)" value={newGuardianForm.occupation} onChange={(e) => setNewGuardianForm({ ...newGuardianForm, occupation: e.target.value })} className={inputClass} />
+                <input placeholder="Centres d'intérêt (optionnel)" value={newGuardianForm.areasOfInterest} onChange={(e) => setNewGuardianForm({ ...newGuardianForm, areasOfInterest: e.target.value })} className={`${inputClass} col-span-2`} />
               </div>
               <button type="submit" disabled={savingNewGuardian} className="w-fit rounded-xl bg-primary px-4 py-2.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-primary-hover disabled:opacity-60">
                 {savingNewGuardian ? 'Création...' : 'Créer et lier'}
