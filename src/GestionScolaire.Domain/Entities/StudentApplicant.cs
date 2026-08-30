@@ -22,6 +22,9 @@ public class StudentApplicant : BaseEntity
     public Guid? ProgramId { get; set; }
     public AcademicProgram? Program { get; set; }
 
+    public Guid? AdmissionCampaignId { get; set; }
+    public AdmissionCampaign? AdmissionCampaign { get; set; }
+
     public DateTime AppliedDate { get; set; } = DateTime.UtcNow;
     public AdmissionStatus Status { get; set; } = AdmissionStatus.Submitted;
     public DateTime? DecisionDate { get; set; }

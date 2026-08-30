@@ -28,6 +28,8 @@ export async function createApplicant(request: {
   guardianPhone: string | null;
   levelAppliedFor: string;
   academicYearId: string;
+  programId: string | null;
+  admissionCampaignId: string | null;
 }): Promise<StudentApplicant> {
   const { data } = await apiClient.post<StudentApplicant>('/studentapplicants', {
     ...request,

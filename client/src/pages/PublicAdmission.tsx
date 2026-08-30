@@ -1,7 +1,9 @@
-import { useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { Link } from 'react-router-dom';
 import { GraduationCap } from 'lucide-react';
 import { submitPublicApplication } from '../api/publicAdmissions';
+import { fetchOpenAdmissionCampaigns } from '../api/admissionCampaigns';
+import type { OpenAdmissionCampaign } from '../types';
 
 const inputClass =
   'rounded-xl border border-border bg-bg px-3.5 py-2.5 text-sm text-slate outline-none focus:border-primary focus:ring-2 focus:ring-primary/20';
@@ -17,6 +19,8 @@ const emptyForm = {
   guardianEmail: '',
   guardianPhone: '',
   levelAppliedFor: '',
+  admissionCampaignId: '',
+  programId: '',
 };
 
 export function PublicAdmission() {
@@ -24,6 +28,13 @@ export function PublicAdmission() {
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [openCampaigns, setOpenCampaigns] = useState<OpenAdmissionCampaign[]>([]);
+
+  useEffect(() => {
+    fetchOpenAdmissionCampaigns().then(setOpenCampaigns).catch(() => setOpenCampaigns([]));
+  }, []);
+
+  const selectedCampaign = openCampaigns.find((c) => c.id === form.admissionCampaignId);
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
@@ -41,6 +52,8 @@ export function PublicAdmission() {
         guardianEmail: form.guardianEmail || null,
         guardianPhone: form.guardianPhone,
         levelAppliedFor: form.levelAppliedFor,
+        admissionCampaignId: form.admissionCampaignId || null,
+        programId: form.programId || null,
       });
       setSubmitted(true);
     } catch {
@@ -96,6 +109,32 @@ export function PublicAdmission() {
               <input required placeholder="Niveau demandé (ex: 6ème)" value={form.levelAppliedFor} onChange={(e) => setForm({ ...form, levelAppliedFor: e.target.value })} className={`${inputClass} col-span-2`} />
               <input type="email" placeholder="Email de l'élève (optionnel)" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} className={`${inputClass} col-span-2`} />
               <input placeholder="Téléphone de l'élève (optionnel)" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} className={`${inputClass} col-span-2`} />
+              {openCampaigns.length > 0 && (
+                <>
+                  <select
+                    value={form.admissionCampaignId}
+                    onChange={(e) => setForm({ ...form, admissionCampaignId: e.target.value, programId: '' })}
+                    className={`${inputClass} col-span-2`}
+                  >
+                    <option value="">Candidature libre (hors campagne)</option>
+                    {openCampaigns.map((c) => (
+                      <option key={c.id} value={c.id}>{c.name}</option>
+                    ))}
+                  </select>
+                  {selectedCampaign && selectedCampaign.programs.length > 0 && (
+                    <select
+                      value={form.programId}
+                      onChange={(e) => setForm({ ...form, programId: e.target.value })}
+                      className={`${inputClass} col-span-2`}
+                    >
+                      <option value="">Programme visé (optionnel)</option>
+                      {selectedCampaign.programs.map((p) => (
+                        <option key={p.id} value={p.id}>{p.name}</option>
+                      ))}
+                    </select>
+                  )}
+                </>
+              )}
             </div>
           </div>
 

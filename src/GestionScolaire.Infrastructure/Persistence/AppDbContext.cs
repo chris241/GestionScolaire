@@ -29,6 +29,8 @@ public class AppDbContext : DbContext, IApplicationDbContext
     public DbSet<StudentLog> StudentLogs => Set<StudentLog>();
     public DbSet<TeacherLog> TeacherLogs => Set<TeacherLog>();
     public DbSet<StudentApplicant> StudentApplicants => Set<StudentApplicant>();
+    public DbSet<AdmissionCampaign> AdmissionCampaigns => Set<AdmissionCampaign>();
+    public DbSet<AdmissionCampaignQuota> AdmissionCampaignQuotas => Set<AdmissionCampaignQuota>();
     public DbSet<AcademicProgram> AcademicPrograms => Set<AcademicProgram>();
     public DbSet<Room> Rooms => Set<Room>();
     public DbSet<Course> Courses => Set<Course>();

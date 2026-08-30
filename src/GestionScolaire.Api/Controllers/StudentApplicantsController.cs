@@ -25,7 +25,7 @@ public class StudentApplicantsController : ControllerBase
     [HttpGet]
     public async Task<ActionResult<List<StudentApplicantDto>>> GetAll([FromQuery] AdmissionStatus? status)
     {
-        var query = _context.StudentApplicants.Include(a => a.AcademicYear).AsQueryable();
+        var query = BaseQuery();
 
         if (status.HasValue)
             query = query.Where(a => a.Status == status.Value);
@@ -40,7 +40,7 @@ public class StudentApplicantsController : ControllerBase
     [HttpGet("{id:guid}")]
     public async Task<ActionResult<StudentApplicantDto>> GetById(Guid id)
     {
-        var applicant = await _context.StudentApplicants.Include(a => a.AcademicYear).FirstOrDefaultAsync(a => a.Id == id);
+        var applicant = await BaseQuery().FirstOrDefaultAsync(a => a.Id == id);
         if (applicant is null) return NotFound();
 
         return Ok(ToDto(applicant));
@@ -51,6 +51,9 @@ public class StudentApplicantsController : ControllerBase
     {
         var year = await _context.AcademicYears.FindAsync(request.AcademicYearId);
         if (year is null) return NotFound(new { message = "Année académique introuvable." });
+
+        var (campaignError, program) = await ValidateCampaignAndProgramAsync(request.AdmissionCampaignId, request.ProgramId);
+        if (campaignError is not null) return BadRequest(new { message = campaignError });
 
         var applicant = new StudentApplicant
         {
@@ -65,14 +68,16 @@ public class StudentApplicantsController : ControllerBase
             GuardianPhone = request.GuardianPhone,
             LevelAppliedFor = request.LevelAppliedFor,
             AcademicYearId = request.AcademicYearId,
+            ProgramId = request.ProgramId,
+            AdmissionCampaignId = request.AdmissionCampaignId,
             Status = AdmissionStatus.Submitted
         };
 
         _context.StudentApplicants.Add(applicant);
         await _context.SaveChangesAsync();
 
-        applicant.AcademicYear = year;
-        return Ok(ToDto(applicant));
+        var full = await BaseQuery().FirstAsync(a => a.Id == applicant.Id);
+        return Ok(ToDto(full));
     }
 
     /// Formulaire public de candidature : accessible sans compte, pour que les familles postulent directement.
@@ -91,6 +96,9 @@ public class StudentApplicantsController : ControllerBase
         if (dateOfBirth > DateTime.UtcNow)
             return BadRequest(new { message = "Date de naissance invalide." });
 
+        var (campaignError, program) = await ValidateCampaignAndProgramAsync(request.AdmissionCampaignId, request.ProgramId);
+        if (campaignError is not null) return BadRequest(new { message = campaignError });
+
         var applicant = new StudentApplicant
         {
             FirstName = request.FirstName,
@@ -104,20 +112,22 @@ public class StudentApplicantsController : ControllerBase
             GuardianPhone = request.GuardianPhone,
             LevelAppliedFor = request.LevelAppliedFor,
             AcademicYearId = year.Id,
+            ProgramId = request.ProgramId,
+            AdmissionCampaignId = request.AdmissionCampaignId,
             Status = AdmissionStatus.Submitted
         };
 
         _context.StudentApplicants.Add(applicant);
         await _context.SaveChangesAsync();
 
-        applicant.AcademicYear = year;
-        return Ok(ToDto(applicant));
+        var full = await BaseQuery().FirstAsync(a => a.Id == applicant.Id);
+        return Ok(ToDto(full));
     }
 
     [HttpPut("{id:guid}/status")]
     public async Task<ActionResult<StudentApplicantDto>> UpdateStatus(Guid id, UpdateStudentApplicantStatusRequest request)
     {
-        var applicant = await _context.StudentApplicants.Include(a => a.AcademicYear).FirstOrDefaultAsync(a => a.Id == id);
+        var applicant = await BaseQuery().FirstOrDefaultAsync(a => a.Id == id);
         if (applicant is null) return NotFound();
 
         if (applicant.Status is AdmissionStatus.Accepted or AdmissionStatus.Enrolled)
@@ -135,7 +145,7 @@ public class StudentApplicantsController : ControllerBase
     [HttpPost("{id:guid}/accept")]
     public async Task<ActionResult<StudentApplicantDto>> Accept(Guid id, AcceptApplicantRequest request)
     {
-        var applicant = await _context.StudentApplicants.Include(a => a.AcademicYear).FirstOrDefaultAsync(a => a.Id == id);
+        var applicant = await BaseQuery().FirstOrDefaultAsync(a => a.Id == id);
         if (applicant is null) return NotFound();
 
         if (applicant.Status is AdmissionStatus.Accepted or AdmissionStatus.Enrolled)
@@ -143,6 +153,24 @@ public class StudentApplicantsController : ControllerBase
 
         var schoolClass = await _context.Classes.FindAsync(request.ClassId);
         if (schoolClass is null) return NotFound(new { message = "Classe introuvable." });
+
+        if (applicant.AdmissionCampaignId.HasValue && applicant.ProgramId.HasValue)
+        {
+            var quota = await _context.AdmissionCampaignQuotas.FirstOrDefaultAsync(q =>
+                q.AdmissionCampaignId == applicant.AdmissionCampaignId.Value && q.ProgramId == applicant.ProgramId.Value);
+
+            if (quota is not null)
+            {
+                var acceptedCount = await _context.StudentApplicants.CountAsync(a =>
+                    a.AdmissionCampaignId == applicant.AdmissionCampaignId.Value &&
+                    a.ProgramId == applicant.ProgramId.Value &&
+                    a.Id != applicant.Id &&
+                    (a.Status == AdmissionStatus.Accepted || a.Status == AdmissionStatus.Enrolled));
+
+                if (acceptedCount >= quota.Quota)
+                    return Conflict(new { message = "Le quota de ce programme pour cette campagne est atteint." });
+            }
+        }
 
         var enrollmentNumber = request.EnrollmentNumber
             ?? $"MAT-{DateTime.UtcNow.Year}-{(await _context.Students.CountAsync() + 1):000}";
@@ -172,7 +200,7 @@ public class StudentApplicantsController : ControllerBase
     [HttpPost("{id:guid}/reject")]
     public async Task<ActionResult<StudentApplicantDto>> Reject(Guid id, [FromBody] string? notes)
     {
-        var applicant = await _context.StudentApplicants.Include(a => a.AcademicYear).FirstOrDefaultAsync(a => a.Id == id);
+        var applicant = await BaseQuery().FirstOrDefaultAsync(a => a.Id == id);
         if (applicant is null) return NotFound();
 
         applicant.Status = AdmissionStatus.Rejected;
@@ -184,9 +212,37 @@ public class StudentApplicantsController : ControllerBase
         return Ok(ToDto(applicant));
     }
 
+    private async Task<(string? Error, AcademicProgram? Program)> ValidateCampaignAndProgramAsync(Guid? campaignId, Guid? programId)
+    {
+        if (programId.HasValue)
+        {
+            var program = await _context.AcademicPrograms.FindAsync(programId.Value);
+            if (program is null) return ("Programme introuvable.", null);
+        }
+
+        if (campaignId.HasValue)
+        {
+            var campaign = await _context.AdmissionCampaigns.FindAsync(campaignId.Value);
+            if (campaign is null) return ("Campagne d'admission introuvable.", null);
+
+            var now = DateTime.UtcNow;
+            if (now < campaign.StartDate || now > campaign.EndDate)
+                return ("Cette campagne d'admission n'est pas ouverte actuellement.", null);
+        }
+
+        return (null, null);
+    }
+
+    private IQueryable<StudentApplicant> BaseQuery() => _context.StudentApplicants
+        .Include(a => a.AcademicYear)
+        .Include(a => a.Program)
+        .Include(a => a.AdmissionCampaign);
+
     private static StudentApplicantDto ToDto(StudentApplicant a) => new(
         a.Id, a.FirstName, a.LastName, a.DateOfBirth, a.Gender.ToString(),
         a.Email, a.Phone, a.GuardianName, a.GuardianEmail, a.GuardianPhone,
         a.LevelAppliedFor, a.AcademicYearId, a.AcademicYear.Name,
+        a.ProgramId, a.Program?.Name,
+        a.AdmissionCampaignId, a.AdmissionCampaign?.Name,
         a.AppliedDate, a.Status.ToString(), a.DecisionDate, a.DecisionNotes, a.ConvertedStudentId);
 }

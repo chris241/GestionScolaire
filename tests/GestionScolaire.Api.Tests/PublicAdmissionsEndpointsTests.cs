@@ -27,7 +27,7 @@ public class PublicAdmissionsEndpointsTests
 
         var response = await anonymousClient.PostAsJsonAsync("/api/studentapplicants/public", new PublicApplicantRequest(
             "Candidat", "PortailPublic", new DateTime(2014, 4, 12), Gender.Masculin,
-            null, null, "Parent DePortailPublic", null, "034 55 555 55", "5ème"));
+            null, null, "Parent DePortailPublic", null, "034 55 555 55", "5ème", null, null));
 
         response.EnsureSuccessStatusCode();
         var created = await response.Content.ReadFromJsonAsync<StudentApplicantDto>();

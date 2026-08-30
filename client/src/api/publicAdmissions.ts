@@ -13,6 +13,8 @@ export async function submitPublicApplication(request: {
   guardianEmail: string | null;
   guardianPhone: string;
   levelAppliedFor: string;
+  programId: string | null;
+  admissionCampaignId: string | null;
 }): Promise<{ id: string }> {
   const { data } = await apiClient.post('/studentapplicants/public', {
     ...request,
