@@ -32,6 +32,7 @@ public interface IApplicationDbContext
     DbSet<Topic> Topics { get; }
     DbSet<CourseSchedule> CourseSchedules { get; }
     DbSet<ProgramEnrollment> ProgramEnrollments { get; }
+    DbSet<CourseEnrollment> CourseEnrollments { get; }
     DbSet<StudentLeaveApplication> StudentLeaveApplications { get; }
     DbSet<GradingScale> GradingScales { get; }
     DbSet<GradingScaleInterval> GradingScaleIntervals { get; }

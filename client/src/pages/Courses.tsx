@@ -2,8 +2,11 @@ import { useEffect, useState, type FormEvent } from 'react';
 import { fetchCourses, createCourse, deleteCourse, addTopic, updateTopic, deleteTopic } from '../api/courses';
 import { fetchPrograms } from '../api/programs';
 import { fetchSubjects } from '../api/subjects';
+import { fetchProgramEnrollments } from '../api/programEnrollments';
+import { fetchCourseEnrollments, createCourseEnrollment, bulkEnrollInCourse, deleteCourseEnrollment } from '../api/courseEnrollments';
+import { fetchAcademicYears } from '../api/academicYears';
 import { useAuth } from '../lib/AuthContext';
-import type { Course, Program, Subject, Topic } from '../types';
+import type { Course, Program, Subject, Topic, ProgramEnrollment, CourseEnrollment } from '../types';
 
 const inputClass =
   'rounded-xl border border-border bg-bg px-3.5 py-2.5 text-sm text-slate outline-none focus:border-primary focus:ring-2 focus:ring-primary/20';
@@ -26,16 +29,38 @@ export function Courses() {
   const [contentDrafts, setContentDrafts] = useState<Record<string, string>>({});
   const [savingContent, setSavingContent] = useState<string | null>(null);
 
+  const [currentAcademicYearId, setCurrentAcademicYearId] = useState('');
+  const [programEnrollments, setProgramEnrollments] = useState<ProgramEnrollment[]>([]);
+  const [courseEnrollments, setCourseEnrollments] = useState<CourseEnrollment[]>([]);
+  const [studentToEnroll, setStudentToEnroll] = useState('');
+  const [savingEnrollment, setSavingEnrollment] = useState(false);
+  const [bulkEnrolling, setBulkEnrolling] = useState(false);
+
   useEffect(() => {
-    Promise.all([fetchCourses(), fetchPrograms(), fetchSubjects()])
-      .then(([coursesData, programsData, subjectsData]) => {
+    Promise.all([fetchCourses(), fetchPrograms(), fetchSubjects(), fetchAcademicYears()])
+      .then(([coursesData, programsData, subjectsData, yearsData]) => {
         setCourses(coursesData);
         setPrograms(programsData);
         setSubjects(subjectsData);
+        const current = yearsData.find((y) => y.isCurrent) ?? yearsData[0];
+        if (current) setCurrentAcademicYearId(current.id);
       })
       .catch(() => setError('Impossible de charger les données.'))
       .finally(() => setLoading(false));
   }, []);
+
+  useEffect(() => {
+    if (!selectedCourseId) return;
+    const course = courses.find((c) => c.id === selectedCourseId);
+    if (!course) return;
+
+    Promise.all([fetchProgramEnrollments(course.programId), fetchCourseEnrollments(course.id)])
+      .then(([programData, courseData]) => {
+        setProgramEnrollments(programData);
+        setCourseEnrollments(courseData);
+      })
+      .catch(() => setError("Impossible de charger les inscriptions à ce cours."));
+  }, [selectedCourseId, courses]);
 
   async function handleCreateCourse(event: FormEvent) {
     event.preventDefault();
@@ -135,7 +160,56 @@ export function Courses() {
     }
   }
 
+  async function handleEnrollStudent(event: FormEvent) {
+    event.preventDefault();
+    if (!selectedCourseId || !studentToEnroll || !currentAcademicYearId) return;
+
+    setSavingEnrollment(true);
+    setError(null);
+    try {
+      const created = await createCourseEnrollment({
+        studentId: studentToEnroll,
+        courseId: selectedCourseId,
+        academicYearId: currentAcademicYearId,
+      });
+      setCourseEnrollments((prev) => [...prev, created]);
+      setStudentToEnroll('');
+    } catch {
+      setError("Impossible d'inscrire cet élève à ce cours.");
+    } finally {
+      setSavingEnrollment(false);
+    }
+  }
+
+  async function handleBulkEnroll() {
+    if (!selectedCourseId || !currentAcademicYearId) return;
+
+    setBulkEnrolling(true);
+    setError(null);
+    try {
+      const studentIds = programEnrollments.map((e) => e.studentId);
+      const result = await bulkEnrollInCourse({ studentIds, courseId: selectedCourseId, academicYearId: currentAcademicYearId });
+      setCourseEnrollments(result);
+    } catch {
+      setError("Impossible d'inscrire tous les élèves du programme.");
+    } finally {
+      setBulkEnrolling(false);
+    }
+  }
+
+  async function handleRemoveEnrollment(id: string) {
+    setError(null);
+    try {
+      await deleteCourseEnrollment(id);
+      setCourseEnrollments((prev) => prev.filter((e) => e.id !== id));
+    } catch {
+      setError("Impossible de retirer cette inscription.");
+    }
+  }
+
   const selectedCourse = courses.find((c) => c.id === selectedCourseId);
+  const enrolledStudentIds = new Set(courseEnrollments.map((e) => e.studentId));
+  const eligibleToEnroll = programEnrollments.filter((e) => !enrolledStudentIds.has(e.studentId));
 
   return (
     <div className="mx-auto max-w-6xl px-6 py-8">
@@ -320,6 +394,69 @@ export function Courses() {
           )}
         </div>
       </div>
+
+      {selectedCourse && isDirector && (
+        <div className="mt-6 rounded-2xl border border-border bg-surface p-6 shadow-sm">
+          <h2 className="text-base font-semibold text-slate">Élèves inscrits — {selectedCourse.name}</h2>
+          <p className="mt-1 text-sm text-slate-soft">
+            Inscription individuelle par cours (en plus de l'inscription au programme) — pour les options ou cours à la carte.
+          </p>
+
+          <div className="mt-4 flex flex-col gap-2">
+            {courseEnrollments.length === 0 && <p className="text-sm text-slate-soft">Aucun élève inscrit à ce cours.</p>}
+            {courseEnrollments.map((enrollment) => (
+              <div key={enrollment.id} className="flex items-center justify-between rounded-xl border border-border px-3.5 py-2.5">
+                <div>
+                  <p className="text-sm font-medium text-slate">{enrollment.studentFullName}</p>
+                  <p className="text-xs text-slate-soft">{enrollment.status} · inscrit le {new Date(enrollment.enrollmentDate).toLocaleDateString('fr-FR')}</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => handleRemoveEnrollment(enrollment.id)}
+                  className="text-xs font-medium text-danger hover:text-danger"
+                >
+                  Retirer
+                </button>
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-4 flex flex-wrap items-center gap-3 border-t border-border pt-4">
+            <form onSubmit={handleEnrollStudent} className="flex flex-1 gap-2">
+              <select
+                value={studentToEnroll}
+                onChange={(e) => setStudentToEnroll(e.target.value)}
+                className={`${inputClass} flex-1`}
+              >
+                <option value="" disabled>Inscrire un élève...</option>
+                {eligibleToEnroll.map((e) => (
+                  <option key={e.studentId} value={e.studentId}>{e.studentFullName}</option>
+                ))}
+              </select>
+              <button
+                type="submit"
+                disabled={!studentToEnroll || savingEnrollment}
+                className="rounded-xl bg-primary px-4 py-2.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-primary-hover disabled:opacity-60"
+              >
+                {savingEnrollment ? 'Inscription...' : 'Inscrire'}
+              </button>
+            </form>
+            <button
+              type="button"
+              onClick={handleBulkEnroll}
+              disabled={bulkEnrolling || eligibleToEnroll.length === 0}
+              className="rounded-xl border border-primary px-4 py-2.5 text-sm font-medium text-primary transition-colors hover:bg-primary-soft disabled:opacity-60"
+            >
+              {bulkEnrolling ? 'Inscription...' : `Inscrire tous les élèves du programme (${eligibleToEnroll.length})`}
+            </button>
+          </div>
+          {programEnrollments.length === 0 && (
+            <p className="mt-2 text-xs text-slate-soft">
+              Aucun élève n'est inscrit au programme « {selectedCourse.programName} » — inscrivez-les d'abord au programme.
+            </p>
+          )}
+        </div>
+      )}
     </div>
   );
 }
