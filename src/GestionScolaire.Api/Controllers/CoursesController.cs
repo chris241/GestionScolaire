@@ -141,6 +141,10 @@ public class CoursesController : ControllerBase
         var topic = await _context.Topics.FindAsync(topicId);
         if (topic is null) return NotFound();
 
+        // Topic n'a pas son propre filtre (enfant pur de Course) : on vérifie explicitement que le
+        // Course parent est bien accessible dans l'école active avant de modifier ce Topic.
+        if (await _context.Courses.FindAsync(topic.CourseId) is null) return NotFound();
+
         topic.Name = request.Name;
         topic.Description = request.Description;
         topic.Content = request.Content;
@@ -157,6 +161,8 @@ public class CoursesController : ControllerBase
     {
         var topic = await _context.Topics.FindAsync(topicId);
         if (topic is null) return NotFound();
+
+        if (await _context.Courses.FindAsync(topic.CourseId) is null) return NotFound();
 
         _context.Topics.Remove(topic);
         await _context.SaveChangesAsync();

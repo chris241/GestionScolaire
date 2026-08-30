@@ -16,10 +16,12 @@ namespace GestionScolaire.Api.Controllers;
 public class TeachersController : ControllerBase
 {
     private readonly IApplicationDbContext _context;
+    private readonly ICurrentUserService _currentUser;
 
-    public TeachersController(IApplicationDbContext context)
+    public TeachersController(IApplicationDbContext context, ICurrentUserService currentUser)
     {
         _context = context;
+        _currentUser = currentUser;
     }
 
     [HttpGet]
@@ -59,6 +61,11 @@ public class TeachersController : ControllerBase
             HireDate = request.HireDate.AsUtc()
         };
         _context.Teachers.Add(teacher);
+
+        // Rattache l'enseignant à l'école active du Directeur : sans ce lien TeacherSchool, l'enseignant
+        // serait immédiatement invisible (filtré partout, y compris dans GetAll ci-dessus) et ne pourrait
+        // jamais se connecter (aucune école accessible à la claim JWT).
+        _context.TeacherSchools.Add(new TeacherSchool { Teacher = teacher, SchoolId = _currentUser.SchoolId!.Value });
 
         await _context.SaveChangesAsync();
 

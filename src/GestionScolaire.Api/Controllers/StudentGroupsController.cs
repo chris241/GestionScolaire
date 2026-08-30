@@ -44,6 +44,10 @@ public class StudentGroupsController : ControllerBase
     [HttpGet("{id:guid}/members")]
     public async Task<ActionResult<List<StudentGroupMemberDto>>> GetMembers(Guid id)
     {
+        // StudentGroupMember n'a pas son propre filtre (enfant pur de StudentGroup) : on vérifie
+        // explicitement que le groupe parent est bien accessible dans l'école active.
+        if (await _context.StudentGroups.FindAsync(id) is null) return NotFound();
+
         var members = await _context.StudentGroupMembers
             .Include(m => m.Student)
             .Where(m => m.StudentGroupId == id)
@@ -184,6 +188,8 @@ public class StudentGroupsController : ControllerBase
     [Authorize(Roles = "Director")]
     public async Task<IActionResult> RemoveMember(Guid id, Guid studentId)
     {
+        if (await _context.StudentGroups.FindAsync(id) is null) return NotFound();
+
         var member = await _context.StudentGroupMembers
             .FirstOrDefaultAsync(m => m.StudentGroupId == id && m.StudentId == studentId);
 

@@ -125,6 +125,10 @@ public class AssessmentPlansController : ControllerBase
         var criteria = await _context.AssessmentCriteria.FindAsync(criteriaId);
         if (criteria is null) return NotFound();
 
+        // AssessmentCriteria n'a pas son propre filtre (enfant pur de AssessmentPlan) : on vérifie
+        // explicitement que le plan parent est bien accessible dans l'école active.
+        if (await _context.AssessmentPlans.FindAsync(criteria.AssessmentPlanId) is null) return NotFound();
+
         _context.AssessmentCriteria.Remove(criteria);
         await _context.SaveChangesAsync();
 

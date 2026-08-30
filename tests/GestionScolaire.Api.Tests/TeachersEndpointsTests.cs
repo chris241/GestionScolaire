@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Json;
 using GestionScolaire.Api.Tests.Helpers;
 using GestionScolaire.Application.DTOs.Teachers;
+using GestionScolaire.Application.DTOs.Auth;
 using Xunit;
 
 namespace GestionScolaire.Api.Tests;
@@ -40,9 +41,16 @@ public class TeachersEndpointsTests
         Assert.Equal("Nouveau Professeur", created!.FullName);
         Assert.Equal("Physique", created.Specialty);
 
+        // Vérifie que le lien TeacherSchool a bien été créé : sans lui, l'enseignant serait filtré
+        // partout (invisible dans GetAll) et son token n'aurait aucune école active.
+        var teachers = await client.GetFromJsonAsync<List<TeacherDto>>("/api/teachers");
+        Assert.Contains(teachers!, t => t.Email == "nouveau.prof@ecole.mg");
+
         var loginClient = _factory.CreateClient();
         var auth = await loginClient.LoginAsync("nouveau.prof@ecole.mg", "Password123!");
         Assert.NotNull(auth.AccessToken);
+        Assert.NotNull(auth.User.ActiveSchoolId);
+        Assert.Equal("Lumière", auth.User.ActiveSchoolName);
     }
 
     [Fact]
