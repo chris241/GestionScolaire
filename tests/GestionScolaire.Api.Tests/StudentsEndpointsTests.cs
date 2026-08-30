@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
+using System.Text;
 using GestionScolaire.Api.Tests.Helpers;
 using GestionScolaire.Application.DTOs.Students;
 using Xunit;
@@ -153,5 +154,53 @@ public class StudentsEndpointsTests
 
         var otherResponse = await parent1.GetAsync($"/api/students/{otherChild.Id}/siblings");
         Assert.Equal(HttpStatusCode.Forbidden, otherResponse.StatusCode);
+    }
+
+    // Ne teste volontairement que les lignes en échec : la suite partage une seule base Postgres entre
+    // toutes les classes de test (exécution séquentielle), et un élève réellement créé ici fausserait les
+    // décomptes déjà fixés ailleurs (ex. FeeCollectionReportsEndpointsTests, AttendanceEndpointsTests).
+    // Le chemin de création réussie réutilise le même schéma que StudentApplicantsController.Accept
+    // (déjà couvert par ses propres tests) et a été vérifié manuellement via Docker/curl.
+    [Fact]
+    public async Task Director_ImportStudentsFromCsv_ReportsEachInvalidRowWithItsReason()
+    {
+        var client = await _factory.CreateClient().AsUserAsync("directeur@ecole.mg");
+
+        var csv = "FirstName,LastName,DateOfBirth,Gender,ClassName,EnrollmentNumber\n" +
+                   "Lala,Ranaivo,2012-09-01,Masculin,ClasseInexistante,\n" +
+                   "Tiana,Rakoto,pas-une-date,Masculin,6ème A,\n" +
+                   "Voa,Randria,2012-01-01,PasUnGenre,6ème A,\n" +
+                   ",Sans Prenom,2012-01-01,Masculin,6ème A,\n" +
+                   "Trop,Court,2012-01-01\n";
+
+        using var content = new MultipartFormDataContent();
+        content.Add(new StringContent(csv, Encoding.UTF8), "file", "import.csv");
+
+        var response = await client.PostAsync("/api/students/import", content);
+        response.EnsureSuccessStatusCode();
+        var result = await response.Content.ReadFromJsonAsync<StudentImportResultDto>();
+
+        Assert.Equal(5, result!.TotalRows);
+        Assert.Equal(0, result.SuccessCount);
+        Assert.Equal(5, result.ErrorCount);
+        Assert.Contains(result.Rows, r => r.FirstName == "Lala" && !r.Success && r.ErrorMessage!.Contains("Classe introuvable"));
+        Assert.Contains(result.Rows, r => r.FirstName == "Tiana" && !r.Success && r.ErrorMessage!.Contains("Date de naissance"));
+        Assert.Contains(result.Rows, r => r.FirstName == "Voa" && !r.Success && r.ErrorMessage!.Contains("Genre invalide"));
+        Assert.Contains(result.Rows, r => r.LastName == "Sans Prenom" && !r.Success && r.ErrorMessage!.Contains("Prénom et nom"));
+        Assert.Contains(result.Rows, r => r.LastName == "Court" && !r.Success && r.ErrorMessage!.Contains("incomplète"));
+    }
+
+    [Fact]
+    public async Task Teacher_CannotImportStudents()
+    {
+        var client = await _factory.CreateClient().AsUserAsync("prof.math@ecole.mg");
+
+        var csv = "FirstName,LastName,DateOfBirth,Gender,ClassName,EnrollmentNumber\nInterdit,Test,2013-01-01,Masculin,6ème A,\n";
+        using var content = new MultipartFormDataContent();
+        content.Add(new StringContent(csv, Encoding.UTF8), "file", "import.csv");
+
+        var response = await client.PostAsync("/api/students/import", content);
+
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
     }
 }

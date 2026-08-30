@@ -11,6 +11,7 @@ public class Guardian : BaseEntity
     public string Phone { get; set; } = string.Empty;
     public string? Email { get; set; }
     public string? Occupation { get; set; }
+    public string? AreasOfInterest { get; set; }
 
     public ICollection<StudentGuardian> Students { get; set; } = new List<StudentGuardian>();
 

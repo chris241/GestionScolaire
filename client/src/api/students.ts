@@ -1,5 +1,5 @@
 import { apiClient } from './client';
-import type { Sibling, Student } from '../types';
+import type { Sibling, Student, StudentImportResult } from '../types';
 
 export async function fetchStudents(classId?: string): Promise<Student[]> {
   const { data } = await apiClient.get<Student[]>('/students', { params: { classId } });
@@ -17,4 +17,13 @@ export async function addSibling(studentId: string, siblingStudentId: string): P
 
 export async function removeSibling(studentId: string, siblingStudentId: string): Promise<void> {
   await apiClient.delete(`/students/${studentId}/siblings/${siblingStudentId}`);
+}
+
+export async function importStudents(file: File): Promise<StudentImportResult> {
+  const formData = new FormData();
+  formData.append('file', file);
+  const { data } = await apiClient.post<StudentImportResult>('/students/import', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+  return data;
 }
