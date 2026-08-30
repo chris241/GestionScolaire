@@ -84,6 +84,11 @@ public class AppDbContext : DbContext, IApplicationDbContext
         modelBuilder.Entity<AssessmentGroup>().HasQueryFilter(g => g.SchoolId == _currentUser.SchoolId);
         modelBuilder.Entity<AssessmentPlan>().HasQueryFilter(p => p.SchoolId == _currentUser.SchoolId);
         modelBuilder.Entity<Grade>().HasQueryFilter(g => g.Class.SchoolId == _currentUser.SchoolId);
+        modelBuilder.Entity<FeeCategory>().HasQueryFilter(c => c.SchoolId == _currentUser.SchoolId);
+        modelBuilder.Entity<FeeStructure>().HasQueryFilter(s => s.AcademicYear.SchoolId == _currentUser.SchoolId);
+        modelBuilder.Entity<FeeSchedule>().HasQueryFilter(s => s.AcademicTerm.SchoolId == _currentUser.SchoolId);
+        modelBuilder.Entity<Invoice>().HasQueryFilter(i => i.SchoolId == _currentUser.SchoolId);
+        modelBuilder.Entity<Payment>().HasQueryFilter(p => p.SchoolId == _currentUser.SchoolId);
 
         base.OnModelCreating(modelBuilder);
     }

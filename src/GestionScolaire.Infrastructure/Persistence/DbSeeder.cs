@@ -397,6 +397,7 @@ public static class DbSeeder
             context.Payments.Add(new Payment
             {
                 Student = student,
+                School = schoolLumiere,
                 Description = "Frais de scolarité — Trimestre 1",
                 Amount = 250000,
                 AcademicYear = "2025-2026",
@@ -444,9 +445,9 @@ public static class DbSeeder
 
         var feeCategories = new[]
         {
-            new FeeCategory { Name = "Scolarité", Description = "Frais de scolarité de base" },
-            new FeeCategory { Name = "Cantine", Description = "Restauration scolaire" },
-            new FeeCategory { Name = "Transport", Description = "Ramassage scolaire" },
+            new FeeCategory { Name = "Scolarité", Description = "Frais de scolarité de base", School = schoolLumiere },
+            new FeeCategory { Name = "Cantine", Description = "Restauration scolaire", School = schoolLumiere },
+            new FeeCategory { Name = "Transport", Description = "Ramassage scolaire", School = schoolLumiere },
         };
         context.FeeCategories.AddRange(feeCategories);
 
@@ -469,6 +470,7 @@ public static class DbSeeder
         {
             Student = students[0],
             FeeSchedule = feeSchedule,
+            School = schoolLumiere,
             InvoiceNumber = $"FAC-2025T1-{students[0].EnrollmentNumber[^3..]}",
             TotalAmount = 250000,
             DueDate = feeSchedule.DueDate,
@@ -478,6 +480,7 @@ public static class DbSeeder
         {
             Student = students[1],
             FeeSchedule = feeSchedule,
+            School = schoolLumiere,
             InvoiceNumber = $"FAC-2025T1-{students[1].EnrollmentNumber[^3..]}",
             TotalAmount = 250000,
             DueDate = feeSchedule.DueDate,
@@ -489,6 +492,7 @@ public static class DbSeeder
         {
             Student = students[0],
             Invoice = paidInvoice,
+            School = schoolLumiere,
             Description = "Frais standard 2025-2026 — Trimestre 1",
             Amount = 250000,
             AcademicYear = "2025-2026",
