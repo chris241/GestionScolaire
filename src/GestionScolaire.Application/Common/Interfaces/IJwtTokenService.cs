@@ -4,6 +4,6 @@ namespace GestionScolaire.Application.Common.Interfaces;
 
 public interface IJwtTokenService
 {
-    string GenerateAccessToken(User user);
+    string GenerateAccessToken(User user, Guid? schoolId);
     string GenerateRefreshToken();
 }

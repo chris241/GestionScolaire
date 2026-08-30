@@ -5,15 +5,13 @@ import {
   setCurrentAcademicYear,
 } from '../api/academicYears';
 import { fetchAcademicTerms, createAcademicTerm, deleteAcademicTerm } from '../api/academicTerms';
-import { fetchEducationSettings, updateEducationSettings } from '../api/settings';
-import type { AcademicYear, AcademicTerm, EducationSettings as EducationSettingsType } from '../types';
+import type { AcademicYear, AcademicTerm } from '../types';
 
 function formatDate(date: string) {
   return new Date(date).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' });
 }
 
 export function Settings() {
-  const [settings, setSettings] = useState<EducationSettingsType | null>(null);
   const [years, setYears] = useState<AcademicYear[]>([]);
   const [terms, setTerms] = useState<AcademicTerm[]>([]);
   const [selectedYearId, setSelectedYearId] = useState('');
@@ -21,23 +19,14 @@ export function Settings() {
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
 
-  const [settingsForm, setSettingsForm] = useState({ schoolName: '', address: '', currency: 'MGA', defaultMaxScore: '20' });
   const [yearForm, setYearForm] = useState({ name: '', startDate: '', endDate: '' });
   const [termForm, setTermForm] = useState({ name: '', order: '1', startDate: '', endDate: '' });
-  const [savingSettings, setSavingSettings] = useState(false);
   const [savingYear, setSavingYear] = useState(false);
   const [savingTerm, setSavingTerm] = useState(false);
 
   useEffect(() => {
-    Promise.all([fetchEducationSettings(), fetchAcademicYears()])
-      .then(([settingsData, yearsData]) => {
-        setSettings(settingsData);
-        setSettingsForm({
-          schoolName: settingsData.schoolName,
-          address: settingsData.address ?? '',
-          currency: settingsData.currency,
-          defaultMaxScore: String(settingsData.defaultMaxScore),
-        });
+    fetchAcademicYears()
+      .then((yearsData) => {
         setYears(yearsData);
         const current = yearsData.find((y) => y.isCurrent) ?? yearsData[0];
         if (current) setSelectedYearId(current.id);
@@ -56,26 +45,6 @@ export function Settings() {
   function flashMessage(text: string) {
     setMessage(text);
     setTimeout(() => setMessage(null), 3000);
-  }
-
-  async function handleSaveSettings(event: FormEvent) {
-    event.preventDefault();
-    setSavingSettings(true);
-    setError(null);
-    try {
-      const updated = await updateEducationSettings({
-        schoolName: settingsForm.schoolName,
-        address: settingsForm.address || null,
-        currency: settingsForm.currency,
-        defaultMaxScore: Number(settingsForm.defaultMaxScore),
-      });
-      setSettings(updated);
-      flashMessage('Paramètres enregistrés.');
-    } catch {
-      setError("Impossible d'enregistrer les paramètres.");
-    } finally {
-      setSavingSettings(false);
-    }
   }
 
   async function handleCreateYear(event: FormEvent) {
@@ -145,7 +114,7 @@ export function Settings() {
     <div className="mx-auto max-w-5xl px-6 py-8">
       <h1 className="text-2xl font-semibold text-slate">Paramètres</h1>
       <p className="mt-1 text-sm text-slate-soft">
-        {loading ? 'Chargement...' : "Informations de l'établissement, années et trimestres académiques."}
+        {loading ? 'Chargement...' : 'Années et trimestres académiques.'}
       </p>
 
       {error && (
@@ -158,51 +127,6 @@ export function Settings() {
           {message}
         </div>
       )}
-
-      <div className="mt-6 rounded-2xl border border-border bg-surface p-6 shadow-sm">
-        <h2 className="text-base font-semibold text-slate">Établissement</h2>
-        {settings && (
-          <form onSubmit={handleSaveSettings} className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <input
-              required
-              placeholder="Nom de l'établissement"
-              value={settingsForm.schoolName}
-              onChange={(e) => setSettingsForm({ ...settingsForm, schoolName: e.target.value })}
-              className={inputClass}
-            />
-            <input
-              placeholder="Adresse"
-              value={settingsForm.address}
-              onChange={(e) => setSettingsForm({ ...settingsForm, address: e.target.value })}
-              className={inputClass}
-            />
-            <input
-              required
-              placeholder="Devise"
-              value={settingsForm.currency}
-              onChange={(e) => setSettingsForm({ ...settingsForm, currency: e.target.value })}
-              className={inputClass}
-            />
-            <input
-              required
-              type="number"
-              step="0.5"
-              min="1"
-              placeholder="Note maximale par défaut"
-              value={settingsForm.defaultMaxScore}
-              onChange={(e) => setSettingsForm({ ...settingsForm, defaultMaxScore: e.target.value })}
-              className={inputClass}
-            />
-            <button
-              type="submit"
-              disabled={savingSettings}
-              className="sm:col-span-2 mt-1 w-fit rounded-xl bg-primary px-4 py-2.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-primary-hover disabled:opacity-60"
-            >
-              {savingSettings ? 'Enregistrement...' : 'Enregistrer'}
-            </button>
-          </form>
-        )}
-      </div>
 
       <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
         <div className="rounded-2xl border border-border bg-surface p-6 shadow-sm">

@@ -8,6 +8,9 @@ public class SchoolClass : BaseEntity
     public string Level { get; set; } = string.Empty;
     public int Capacity { get; set; }
 
+    public Guid SchoolId { get; set; }
+    public School School { get; set; } = null!;
+
     public Guid AcademicYearId { get; set; }
     public AcademicYear AcademicYear { get; set; } = null!;
 

@@ -29,7 +29,7 @@ public class StudentsController : ControllerBase
     [HttpGet]
     public async Task<ActionResult<List<StudentDto>>> GetAll([FromQuery] Guid? classId)
     {
-        var query = _context.Students.Include(s => s.Class).AsQueryable();
+        var query = _context.Students.IgnoreQueryFilters().Include(s => s.Class).AsQueryable();
 
         if (classId.HasValue)
             query = query.Where(s => s.ClassId == classId.Value);
@@ -45,7 +45,7 @@ public class StudentsController : ControllerBase
         else if (_currentUser.Role == nameof(UserRole.Teacher))
         {
             // MVP : un professeur n'est titulaire (HomeroomTeacher) que d'une seule classe.
-            var teacherClassIds = _context.Classes
+            var teacherClassIds = _context.Classes.IgnoreQueryFilters()
                 .Where(c => c.HomeroomTeacher != null && c.HomeroomTeacher.UserId == _currentUser.UserId)
                 .Select(c => c.Id);
 
@@ -72,7 +72,7 @@ public class StudentsController : ControllerBase
     {
         if (!await HasAccessAsync(studentId)) return Forbid();
 
-        var links = await _context.StudentSiblings
+        var links = await _context.StudentSiblings.IgnoreQueryFilters()
             .Include(s => s.Student).ThenInclude(s => s.Class)
             .Include(s => s.SiblingStudent).ThenInclude(s => s.Class)
             .Where(s => s.StudentId == studentId || s.SiblingStudentId == studentId)

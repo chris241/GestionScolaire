@@ -136,7 +136,7 @@ public class FinalGradesController : ControllerBase
     {
         if (_currentUser.Role != nameof(UserRole.Teacher)) return true;
 
-        return await _context.Classes.AnyAsync(c =>
+        return await _context.Classes.IgnoreQueryFilters().AnyAsync(c =>
             c.Id == classId && c.HomeroomTeacher != null && c.HomeroomTeacher.UserId == _currentUser.UserId);
     }
 }

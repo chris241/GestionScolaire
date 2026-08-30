@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, GraduationCap, NotebookPen, Wallet, Settings, Users, UserPlus, LogOut, BookOpen, CalendarClock, ClipboardCheck, Trophy, Receipt, Briefcase } from 'lucide-react';
+import { LayoutDashboard, GraduationCap, NotebookPen, Wallet, Settings, Users, UserPlus, LogOut, BookOpen, CalendarClock, ClipboardCheck, Trophy, Receipt, Briefcase, School as SchoolIcon } from 'lucide-react';
 import { useAuth } from '../lib/AuthContext';
 
 const NAV_ITEMS: {
@@ -24,12 +24,15 @@ const NAV_ITEMS: {
   { to: '/programmes', label: 'Programmes', roleLabels: {}, icon: BookOpen, end: false, hideFor: ['Teacher', 'Parent', 'Student'] },
   { to: '/cours', label: 'Cours', roleLabels: {}, icon: BookOpen, end: false, hideFor: ['Parent', 'Student'] },
   { to: '/emploi-du-temps', label: "Emploi du temps", roleLabels: {}, icon: CalendarClock, end: false, hideFor: [] },
+  { to: '/ecoles', label: 'Écoles', roleLabels: {}, icon: SchoolIcon, end: false, hideFor: ['Teacher', 'Parent', 'Student'] },
   { to: '/parametres', label: 'Paramètres', roleLabels: {}, icon: Settings, end: false, hideFor: ['Teacher', 'Parent', 'Student'] },
 ];
 
 export function AppLayout({ children }: { children: ReactNode }) {
-  const { user, logout } = useAuth();
+  const { user, logout, switchSchool } = useAuth();
   const navItems = NAV_ITEMS.filter((item) => !user || !item.hideFor.includes(user.role));
+  const canSwitchSchool =
+    (user?.role === 'Director' || user?.role === 'Teacher') && (user?.availableSchools?.length ?? 0) > 1;
 
   return (
     <div className="flex min-h-svh bg-bg">
@@ -60,6 +63,26 @@ export function AppLayout({ children }: { children: ReactNode }) {
             </NavLink>
           ))}
         </nav>
+
+        {canSwitchSchool ? (
+          <div className="mb-3 flex items-center gap-2 rounded-xl border border-border px-3 py-2.5">
+            <SchoolIcon size={16} strokeWidth={2} className="shrink-0 text-slate-soft" />
+            <select
+              value={user?.activeSchoolId ?? ''}
+              onChange={(e) => switchSchool(e.target.value)}
+              className="min-w-0 flex-1 truncate bg-transparent text-sm font-medium text-slate outline-none"
+            >
+              {user?.availableSchools?.map((school) => (
+                <option key={school.id} value={school.id}>{school.name}</option>
+              ))}
+            </select>
+          </div>
+        ) : user?.activeSchoolName ? (
+          <div className="mb-3 flex items-center gap-2 rounded-xl border border-border px-3 py-2.5">
+            <SchoolIcon size={16} strokeWidth={2} className="shrink-0 text-slate-soft" />
+            <p className="truncate text-sm font-medium text-slate">{user.activeSchoolName}</p>
+          </div>
+        ) : null}
 
         <div className="flex items-center gap-3 rounded-xl border border-border px-3 py-2.5">
           <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary-soft text-sm font-semibold text-primary">

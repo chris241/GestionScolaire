@@ -24,9 +24,9 @@ public class StudentAccessPolicy : IStudentAccessPolicy
         if (parsedRole == UserRole.Teacher)
         {
             // MVP : un professeur n'accède qu'aux élèves de la ou des classes dont il est titulaire (HomeroomTeacher).
-            return await _context.Students
+            return await _context.Students.IgnoreQueryFilters()
                 .Where(s => s.Id == studentId)
-                .Join(_context.Classes, s => s.ClassId, c => c.Id, (s, c) => c)
+                .Join(_context.Classes.IgnoreQueryFilters(), s => s.ClassId, c => c.Id, (s, c) => c)
                 .AnyAsync(c => c.HomeroomTeacher != null && c.HomeroomTeacher.UserId == userId);
         }
 

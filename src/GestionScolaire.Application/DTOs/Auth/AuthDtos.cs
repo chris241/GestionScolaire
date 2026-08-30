@@ -29,5 +29,12 @@ public record UserDto(
     string Email,
     string FirstName,
     string LastName,
-    string Role
+    string Role,
+    Guid? ActiveSchoolId,
+    string? ActiveSchoolName,
+    List<SchoolSummaryDto> AvailableSchools
 );
+
+public record SchoolSummaryDto(Guid Id, string Name);
+
+public record SwitchSchoolRequest([Required] Guid SchoolId);

@@ -22,7 +22,7 @@ public class ProgramsController : ControllerBase
     [HttpGet]
     public async Task<ActionResult<List<ProgramDto>>> GetAll()
     {
-        var programs = await _context.AcademicPrograms
+        var programs = await _context.AcademicPrograms.IgnoreQueryFilters()
             .Include(p => p.Classes)
             .Include(p => p.Courses)
             .OrderBy(p => p.Name)
@@ -35,7 +35,7 @@ public class ProgramsController : ControllerBase
     [HttpGet("{id:guid}")]
     public async Task<ActionResult<ProgramDto>> GetById(Guid id)
     {
-        var program = await _context.AcademicPrograms
+        var program = await _context.AcademicPrograms.IgnoreQueryFilters()
             .Include(p => p.Classes)
             .Include(p => p.Courses)
             .FirstOrDefaultAsync(p => p.Id == id);
@@ -66,7 +66,7 @@ public class ProgramsController : ControllerBase
     [Authorize(Roles = "Director")]
     public async Task<ActionResult<ProgramDto>> Update(Guid id, UpdateProgramRequest request)
     {
-        var program = await _context.AcademicPrograms
+        var program = await _context.AcademicPrograms.IgnoreQueryFilters()
             .Include(p => p.Classes)
             .Include(p => p.Courses)
             .FirstOrDefaultAsync(p => p.Id == id);

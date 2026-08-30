@@ -17,3 +17,8 @@ export async function refresh(accessToken: string, refreshToken: string): Promis
   const { data } = await apiClient.post<AuthResponse>('/auth/refresh', { accessToken, refreshToken });
   return data;
 }
+
+export async function switchSchool(schoolId: string): Promise<AuthResponse> {
+  const { data } = await apiClient.post<AuthResponse>('/auth/switch-school', { schoolId });
+  return data;
+}

@@ -14,6 +14,7 @@ public class User : BaseEntity
     public bool IsActive { get; set; } = true;
     public string? RefreshToken { get; set; }
     public DateTime? RefreshTokenExpiresAt { get; set; }
+    public Guid? LastActiveSchoolId { get; set; }
 
     public Teacher? Teacher { get; set; }
     public ICollection<StudentParent> Children { get; set; } = new List<StudentParent>();
