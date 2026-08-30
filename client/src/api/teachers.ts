@@ -17,3 +17,12 @@ export async function createTeacher(request: {
   const { data } = await apiClient.post<Teacher>('/teachers', request);
   return data;
 }
+
+export async function linkTeacherToSchool(teacherId: string, schoolId: string): Promise<Teacher> {
+  const { data } = await apiClient.post<Teacher>(`/teachers/${teacherId}/schools/${schoolId}`);
+  return data;
+}
+
+export async function unlinkTeacherFromSchool(teacherId: string, schoolId: string): Promise<void> {
+  await apiClient.delete(`/teachers/${teacherId}/schools/${schoolId}`);
+}
