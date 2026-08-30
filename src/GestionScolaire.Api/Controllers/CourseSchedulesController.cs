@@ -49,7 +49,8 @@ public class CourseSchedulesController : ControllerBase
         var student = await _context.Students.IgnoreQueryFilters().FirstOrDefaultAsync(s => s.Id == studentId);
         if (student is null) return NotFound();
 
-        var schedules = await BaseQuery()
+        // Le Parent (sans claim école) accède au planning de son propre enfant, déjà vérifié ci-dessus.
+        var schedules = await BaseQuery().IgnoreQueryFilters()
             .Where(s => s.ClassId == student.ClassId)
             .OrderBy(s => s.DayOfWeek).ThenBy(s => s.StartTime)
             .ToListAsync();
@@ -93,7 +94,8 @@ public class CourseSchedulesController : ControllerBase
             AcademicTermId = request.AcademicTermId,
             DayOfWeek = request.DayOfWeek,
             StartTime = request.StartTime,
-            EndTime = request.EndTime
+            EndTime = request.EndTime,
+            SchoolId = _currentUser.SchoolId!.Value
         };
 
         _context.CourseSchedules.Add(schedule);
@@ -284,7 +286,8 @@ public class CourseSchedulesController : ControllerBase
                 AcademicTermId = slot.AcademicTermId,
                 DayOfWeek = slot.DayOfWeek,
                 StartTime = slot.StartTime,
-                EndTime = slot.EndTime
+                EndTime = slot.EndTime,
+                SchoolId = _currentUser.SchoolId!.Value
             };
 
             _context.CourseSchedules.Add(schedule);
@@ -304,7 +307,7 @@ public class CourseSchedulesController : ControllerBase
         return await _accessPolicy.CanAccessStudentAsync(_currentUser.UserId.Value, _currentUser.Role, studentId);
     }
 
-    private IQueryable<CourseSchedule> BaseQuery() => _context.CourseSchedules.IgnoreQueryFilters()
+    private IQueryable<CourseSchedule> BaseQuery() => _context.CourseSchedules
         .Include(s => s.Course)
         .Include(s => s.Room)
         .Include(s => s.Teacher).ThenInclude(t => t.User)

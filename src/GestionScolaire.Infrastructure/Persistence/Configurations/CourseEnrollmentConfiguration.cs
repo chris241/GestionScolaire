@@ -13,6 +13,11 @@ public class CourseEnrollmentConfiguration : IEntityTypeConfiguration<CourseEnro
 
         builder.Property(e => e.Status).HasConversion<string>().HasMaxLength(20);
 
+        builder.HasOne(e => e.School)
+            .WithMany()
+            .HasForeignKey(e => e.SchoolId)
+            .OnDelete(DeleteBehavior.Restrict);
+
         builder.HasOne(e => e.Student)
             .WithMany()
             .HasForeignKey(e => e.StudentId)

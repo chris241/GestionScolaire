@@ -43,7 +43,8 @@ public class CourseEnrollmentsController : ControllerBase
     {
         if (!await HasAccessAsync(studentId)) return Forbid();
 
-        var enrollments = await BaseQuery()
+        // Le Parent (sans claim école) accède aux inscriptions de son propre enfant, déjà vérifié ci-dessus.
+        var enrollments = await BaseQuery().IgnoreQueryFilters()
             .Where(e => e.StudentId == studentId)
             .OrderBy(e => e.Course.Name)
             .ToListAsync();
@@ -75,7 +76,8 @@ public class CourseEnrollmentsController : ControllerBase
         {
             StudentId = request.StudentId,
             CourseId = request.CourseId,
-            AcademicYearId = request.AcademicYearId
+            AcademicYearId = request.AcademicYearId,
+            SchoolId = _currentUser.SchoolId!.Value
         };
 
         _context.CourseEnrollments.Add(enrollment);
@@ -116,7 +118,8 @@ public class CourseEnrollmentsController : ControllerBase
             {
                 StudentId = studentId,
                 CourseId = request.CourseId,
-                AcademicYearId = request.AcademicYearId
+                AcademicYearId = request.AcademicYearId,
+                SchoolId = _currentUser.SchoolId!.Value
             });
         }
 

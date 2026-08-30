@@ -8,6 +8,9 @@ namespace GestionScolaire.Domain.Entities;
 /// à un cours que si son ProgramEnrollment couvre déjà le programme auquel ce cours appartient.
 public class CourseEnrollment : BaseEntity
 {
+    public Guid SchoolId { get; set; }
+    public School School { get; set; } = null!;
+
     public Guid StudentId { get; set; }
     public Student Student { get; set; } = null!;
 

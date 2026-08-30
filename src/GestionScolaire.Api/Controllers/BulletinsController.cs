@@ -50,7 +50,7 @@ public class BulletinsController : ControllerBase
             .Select(s => s.Id)
             .ToListAsync();
 
-        var termGrades = await _context.Grades
+        var termGrades = await _context.Grades.IgnoreQueryFilters()
             .Include(g => g.Subject)
             .Where(g => classmateIds.Contains(g.StudentId) && g.Term == term)
             .ToListAsync();
@@ -80,7 +80,7 @@ public class BulletinsController : ControllerBase
         if (students.Count == 0) return NotFound(new { message = "Aucun élève actif dans cette classe." });
 
         var studentIds = students.Select(s => s.Id).ToList();
-        var termGrades = await _context.Grades
+        var termGrades = await _context.Grades.IgnoreQueryFilters()
             .Include(g => g.Subject)
             .Where(g => studentIds.Contains(g.StudentId) && g.Term == term)
             .ToListAsync();

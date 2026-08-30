@@ -25,7 +25,12 @@ public class GradesEndpointsTests
     private async Task<(StudentDto Student, SubjectDto Subject)> GetOwnStudentAndSubjectAsync(HttpClient teacherClient)
     {
         var students = await teacherClient.GetFromJsonAsync<List<StudentDto>>("/api/students");
-        var subjects = await teacherClient.GetFromJsonAsync<List<SubjectDto>>("/api/subjects");
+
+        // Subject est scopé par école : un Parent (sans contexte école) ne peut plus le lister, donc on
+        // passe systématiquement par un client Directeur pour cette partie de la configuration du test.
+        var directorClient = await _factory.CreateClient().AsUserAsync("directeur@ecole.mg");
+        var subjects = await directorClient.GetFromJsonAsync<List<SubjectDto>>("/api/subjects");
+
         return (students!.First(), subjects!.First());
     }
 

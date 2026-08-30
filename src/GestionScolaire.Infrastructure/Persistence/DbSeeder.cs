@@ -12,16 +12,6 @@ public static class DbSeeder
     {
         if (await context.Users.AnyAsync()) return;
 
-        var subjects = new[]
-        {
-            new Subject { Name = "Mathématiques", Coefficient = 4 },
-            new Subject { Name = "Français", Coefficient = 4 },
-            new Subject { Name = "Sciences", Coefficient = 3 },
-            new Subject { Name = "Histoire-Géographie", Coefficient = 2 },
-            new Subject { Name = "Anglais", Coefficient = 2 },
-        };
-        context.Subjects.AddRange(subjects);
-
         var director = new User
         {
             Email = "directeur@ecole.mg",
@@ -50,6 +40,16 @@ public static class DbSeeder
         };
         context.Schools.AddRange(schoolLumiere, schoolGenie);
         director.LastActiveSchoolId = schoolLumiere.Id;
+
+        var subjects = new[]
+        {
+            new Subject { Name = "Mathématiques", Coefficient = 4, School = schoolLumiere },
+            new Subject { Name = "Français", Coefficient = 4, School = schoolLumiere },
+            new Subject { Name = "Sciences", Coefficient = 3, School = schoolLumiere },
+            new Subject { Name = "Histoire-Géographie", Coefficient = 2, School = schoolLumiere },
+            new Subject { Name = "Anglais", Coefficient = 2, School = schoolLumiere },
+        };
+        context.Subjects.AddRange(subjects);
 
         var academicYear = new AcademicYear
         {
@@ -155,7 +155,8 @@ public static class DbSeeder
             Name = s.Name,
             Code = s.Name[..Math.Min(3, s.Name.Length)].ToUpperInvariant(),
             Program = academicProgram,
-            Subject = s
+            Subject = s,
+            School = schoolLumiere
         }).ToList();
         context.Courses.AddRange(courses);
 
@@ -179,7 +180,8 @@ public static class DbSeeder
                 AcademicTerm = academicTerms[0],
                 DayOfWeek = scheduleDays[i % scheduleDays.Length],
                 StartTime = new TimeOnly(8 + (i % 4) * 2, 0),
-                EndTime = new TimeOnly(9 + (i % 4) * 2, 0)
+                EndTime = new TimeOnly(9 + (i % 4) * 2, 0),
+                School = schoolLumiere
             });
         }
 
@@ -271,7 +273,8 @@ public static class DbSeeder
             Program = academicProgram,
             AcademicYear = academicYear,
             EnrollmentDate = s.EnrollmentDate,
-            Status = EnrollmentStatus.Active
+            Status = EnrollmentStatus.Active,
+            School = schoolLumiere
         }));
 
         var studentGroup = new StudentGroup

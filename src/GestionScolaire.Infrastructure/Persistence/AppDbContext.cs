@@ -73,6 +73,11 @@ public class AppDbContext : DbContext, IApplicationDbContext
         modelBuilder.Entity<Student>().HasQueryFilter(s => s.Class.SchoolId == _currentUser.SchoolId);
         modelBuilder.Entity<StudentApplicant>().HasQueryFilter(a => a.SchoolId == _currentUser.SchoolId);
         modelBuilder.Entity<AdmissionCampaign>().HasQueryFilter(c => c.SchoolId == _currentUser.SchoolId);
+        modelBuilder.Entity<Subject>().HasQueryFilter(s => s.SchoolId == _currentUser.SchoolId);
+        modelBuilder.Entity<Course>().HasQueryFilter(c => c.SchoolId == _currentUser.SchoolId);
+        modelBuilder.Entity<CourseSchedule>().HasQueryFilter(s => s.SchoolId == _currentUser.SchoolId);
+        modelBuilder.Entity<ProgramEnrollment>().HasQueryFilter(e => e.SchoolId == _currentUser.SchoolId);
+        modelBuilder.Entity<CourseEnrollment>().HasQueryFilter(e => e.SchoolId == _currentUser.SchoolId);
 
         base.OnModelCreating(modelBuilder);
     }
