@@ -4,6 +4,10 @@ using GestionScolaire.Application.DTOs.Admissions;
 using GestionScolaire.Application.DTOs.AcademicTerms;
 using GestionScolaire.Application.DTOs.AcademicYears;
 using GestionScolaire.Application.DTOs.Auth;
+using GestionScolaire.Application.DTOs.CourseEnrollments;
+using GestionScolaire.Application.DTOs.CourseSchedules;
+using GestionScolaire.Application.DTOs.Courses;
+using GestionScolaire.Application.DTOs.ProgramEnrollments;
 using GestionScolaire.Application.DTOs.Programs;
 using GestionScolaire.Application.DTOs.Rooms;
 using GestionScolaire.Application.DTOs.Schools;
@@ -11,15 +15,17 @@ using GestionScolaire.Application.DTOs.Students;
 using GestionScolaire.Application.DTOs.StudentBatches;
 using GestionScolaire.Application.DTOs.StudentCategories;
 using GestionScolaire.Application.DTOs.StudentGroups;
+using GestionScolaire.Application.DTOs.Subjects;
 using Xunit;
 
 namespace GestionScolaire.Api.Tests;
 
 /// Phase 1 : AcademicYear, AcademicTerm, AcademicProgram, Room, StudentCategory, StudentBatch, StudentGroup
 /// et Student (via Class) sont désormais scopés par école. Phase 2 : StudentApplicant et AdmissionCampaign
-/// (avec le formulaire public /candidature qui précise désormais l'école visée). Ces tests vérifient qu'un
-/// directeur tout juste inscrit, propriétaire d'une école fraîchement créée, ne voit jamais les données déjà
-/// seedées pour Lumière/Génie — c'est la garantie de sécurité la plus importante de ces phases.
+/// (avec le formulaire public /candidature qui précise désormais l'école visée). Phase 3 : Subject, Course,
+/// CourseSchedule, ProgramEnrollment, CourseEnrollment. Ces tests vérifient qu'un directeur tout juste
+/// inscrit, propriétaire d'une école fraîchement créée, ne voit jamais les données déjà seedées pour
+/// Lumière/Génie — c'est la garantie de sécurité la plus importante de ces phases.
 [Collection(ApiTestCollection.Name)]
 public class SchoolScopingIsolationTests
 {
@@ -185,6 +191,61 @@ public class SchoolScopingIsolationTests
         var openForGenie = await anonymousClient.GetFromJsonAsync<List<OpenAdmissionCampaignDto>>(
             $"/api/admissioncampaigns/open?schoolId={genie.Id}");
         Assert.DoesNotContain(openForGenie!, c => c.Id == campaign!.Id);
+    }
+
+    [Fact]
+    public async Task NewSchool_NeverSeesSeededSubjects()
+    {
+        var client = await RegisterDirectorWithFreshSchoolAsync();
+
+        var subjects = await client.GetFromJsonAsync<List<SubjectDto>>("/api/subjects");
+
+        Assert.NotNull(subjects);
+        Assert.DoesNotContain(subjects!, s => s.Name == "Mathématiques");
+    }
+
+    [Fact]
+    public async Task NewSchool_NeverSeesSeededCourses()
+    {
+        var client = await RegisterDirectorWithFreshSchoolAsync();
+
+        var courses = await client.GetFromJsonAsync<List<CourseDto>>("/api/courses");
+
+        Assert.NotNull(courses);
+        Assert.DoesNotContain(courses!, c => c.Name == "Mathématiques");
+    }
+
+    [Fact]
+    public async Task NewSchool_NeverSeesSeededCourseSchedules()
+    {
+        var client = await RegisterDirectorWithFreshSchoolAsync();
+
+        var schedules = await client.GetFromJsonAsync<List<CourseScheduleDto>>("/api/courseschedules");
+
+        Assert.NotNull(schedules);
+        Assert.Empty(schedules!);
+    }
+
+    [Fact]
+    public async Task NewSchool_NeverSeesSeededProgramEnrollments()
+    {
+        var client = await RegisterDirectorWithFreshSchoolAsync();
+
+        var enrollments = await client.GetFromJsonAsync<List<ProgramEnrollmentDto>>("/api/programenrollments");
+
+        Assert.NotNull(enrollments);
+        Assert.Empty(enrollments!);
+    }
+
+    [Fact]
+    public async Task NewSchool_NeverSeesSeededCourseEnrollments()
+    {
+        var client = await RegisterDirectorWithFreshSchoolAsync();
+
+        var enrollments = await client.GetFromJsonAsync<List<CourseEnrollmentDto>>("/api/courseenrollments");
+
+        Assert.NotNull(enrollments);
+        Assert.Empty(enrollments!);
     }
 
     [Fact]

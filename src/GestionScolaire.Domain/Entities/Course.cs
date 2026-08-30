@@ -10,6 +10,9 @@ public class Course : BaseEntity
     public string? Code { get; set; }
     public string? Description { get; set; }
 
+    public Guid SchoolId { get; set; }
+    public School School { get; set; } = null!;
+
     public Guid SubjectId { get; set; }
     public Subject Subject { get; set; } = null!;
 

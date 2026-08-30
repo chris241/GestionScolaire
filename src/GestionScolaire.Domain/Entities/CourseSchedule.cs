@@ -4,6 +4,9 @@ namespace GestionScolaire.Domain.Entities;
 
 public class CourseSchedule : BaseEntity
 {
+    public Guid SchoolId { get; set; }
+    public School School { get; set; } = null!;
+
     public Guid CourseId { get; set; }
     public Course Course { get; set; } = null!;
 

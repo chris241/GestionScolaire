@@ -108,7 +108,8 @@ public class GradesController : ControllerBase
     {
         if (!await HasAccessAsync(studentId)) return Forbid();
 
-        var grades = await _context.Grades
+        // Peut être appelé par un Parent (sans claim école), déjà vérifié ci-dessus via l'access policy.
+        var grades = await _context.Grades.IgnoreQueryFilters()
             .Include(g => g.Student)
             .Include(g => g.Subject)
             .Where(g => g.StudentId == studentId)
@@ -126,7 +127,7 @@ public class GradesController : ControllerBase
         var student = await _context.Students.FindAsync(studentId);
         if (student is null) return NotFound();
 
-        var grades = await _context.Grades
+        var grades = await _context.Grades.IgnoreQueryFilters()
             .Include(g => g.Subject)
             .Where(g => g.StudentId == studentId)
             .ToListAsync();

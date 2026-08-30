@@ -57,9 +57,10 @@ public class CoursesEndpointsTests
     public async Task Parent_CannotAddTopic()
     {
         var client = await _factory.CreateClient().AsUserAsync("parent1@ecole.mg");
-        var course = (await client.GetFromJsonAsync<List<CourseDto>>("/api/courses"))!.First();
 
-        var response = await client.PostAsJsonAsync($"/api/courses/{course.Id}/topics", new CreateTopicRequest(
+        // Le rôle est rejeté avant toute validation du cours : un Guid arbitraire suffit, et convient
+        // d'autant mieux qu'un Parent n'a plus de contexte école pour en lister un vrai (Course est scopé).
+        var response = await client.PostAsJsonAsync($"/api/courses/{Guid.NewGuid()}/topics", new CreateTopicRequest(
             "Interdit", null, null, 1));
 
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);

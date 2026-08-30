@@ -11,6 +11,11 @@ public class CourseScheduleConfiguration : IEntityTypeConfiguration<CourseSchedu
         builder.ToTable("CourseSchedules");
         builder.HasKey(s => s.Id);
 
+        builder.HasOne(s => s.School)
+            .WithMany()
+            .HasForeignKey(s => s.SchoolId)
+            .OnDelete(DeleteBehavior.Restrict);
+
         builder.HasOne(s => s.Course)
             .WithMany(c => c.Schedules)
             .HasForeignKey(s => s.CourseId)

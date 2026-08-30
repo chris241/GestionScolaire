@@ -14,10 +14,12 @@ namespace GestionScolaire.Api.Controllers;
 public class ProgramEnrollmentsController : ControllerBase
 {
     private readonly IApplicationDbContext _context;
+    private readonly ICurrentUserService _currentUser;
 
-    public ProgramEnrollmentsController(IApplicationDbContext context)
+    public ProgramEnrollmentsController(IApplicationDbContext context, ICurrentUserService currentUser)
     {
         _context = context;
+        _currentUser = currentUser;
     }
 
     [HttpGet]
@@ -55,7 +57,8 @@ public class ProgramEnrollmentsController : ControllerBase
         {
             StudentId = request.StudentId,
             ProgramId = request.ProgramId,
-            AcademicYearId = request.AcademicYearId
+            AcademicYearId = request.AcademicYearId,
+            SchoolId = _currentUser.SchoolId!.Value
         };
 
         _context.ProgramEnrollments.Add(enrollment);
@@ -93,7 +96,8 @@ public class ProgramEnrollmentsController : ControllerBase
             {
                 StudentId = studentId,
                 ProgramId = request.ProgramId,
-                AcademicYearId = request.AcademicYearId
+                AcademicYearId = request.AcademicYearId,
+                SchoolId = _currentUser.SchoolId!.Value
             });
         }
 
