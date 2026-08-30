@@ -15,10 +15,12 @@ namespace GestionScolaire.Api.Controllers;
 public class AdmissionCampaignsController : ControllerBase
 {
     private readonly IApplicationDbContext _context;
+    private readonly ICurrentUserService _currentUser;
 
-    public AdmissionCampaignsController(IApplicationDbContext context)
+    public AdmissionCampaignsController(IApplicationDbContext context, ICurrentUserService currentUser)
     {
         _context = context;
+        _currentUser = currentUser;
     }
 
     [HttpGet]
@@ -28,17 +30,19 @@ public class AdmissionCampaignsController : ControllerBase
         return Ok(campaigns.Select(ToDto));
     }
 
-    /// Consultation publique (sans authentification) : campagnes actuellement ouvertes et les programmes
-    /// pour lesquels un quota a été défini, pour peupler le formulaire de candidature public.
+    /// Consultation publique (sans authentification) : campagnes actuellement ouvertes pour l'école visée
+    /// et les programmes pour lesquels un quota a été défini, pour peupler le formulaire de candidature public.
     [HttpGet("open")]
     [AllowAnonymous]
-    public async Task<ActionResult<List<OpenAdmissionCampaignDto>>> GetOpen()
+    public async Task<ActionResult<List<OpenAdmissionCampaignDto>>> GetOpen([FromQuery] Guid schoolId)
     {
         var now = DateTime.UtcNow;
 
-        var campaigns = await _context.AdmissionCampaigns
+        // Visiteur anonyme, donc sans contexte école : on filtre explicitement par l'école choisie
+        // dans le formulaire plutôt que de dépendre d'une claim JWT qui n'existe pas ici.
+        var campaigns = await _context.AdmissionCampaigns.IgnoreQueryFilters()
             .Include(c => c.Quotas).ThenInclude(q => q.Program)
-            .Where(c => c.StartDate <= now && c.EndDate >= now)
+            .Where(c => c.SchoolId == schoolId && c.StartDate <= now && c.EndDate >= now)
             .OrderBy(c => c.Name)
             .ToListAsync();
 
@@ -63,7 +67,8 @@ public class AdmissionCampaignsController : ControllerBase
             Name = request.Name,
             AcademicYearId = request.AcademicYearId,
             StartDate = request.StartDate.AsUtc(),
-            EndDate = request.EndDate.AsUtc()
+            EndDate = request.EndDate.AsUtc(),
+            SchoolId = _currentUser.SchoolId!.Value
         };
 
         _context.AdmissionCampaigns.Add(campaign);

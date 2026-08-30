@@ -47,6 +47,7 @@ public record CreateStudentApplicantRequest(
 /// Formulaire de candidature public (sans authentification) : pas d'AcademicYearId (résolu côté serveur sur
 /// l'année académique courante), et coordonnées du tuteur obligatoires pour que l'établissement puisse recontacter la famille.
 public record PublicApplicantRequest(
+    [Required] Guid SchoolId,
     [Required] string FirstName,
     [Required] string LastName,
     [Required] DateTime DateOfBirth,

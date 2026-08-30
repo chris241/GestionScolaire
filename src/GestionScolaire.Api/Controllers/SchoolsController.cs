@@ -21,6 +21,21 @@ public class SchoolsController : ControllerBase
         _currentUser = currentUser;
     }
 
+    /// Consultation publique (sans authentification) : liste des écoles actives, pour peupler le
+    /// sélecteur d'école du formulaire public de candidature.
+    [HttpGet("public")]
+    [AllowAnonymous]
+    public async Task<ActionResult<List<PublicSchoolDto>>> GetPublic()
+    {
+        var schools = await _context.Schools
+            .Where(s => s.IsActive)
+            .OrderBy(s => s.Name)
+            .Select(s => new PublicSchoolDto(s.Id, s.Name))
+            .ToListAsync();
+
+        return Ok(schools);
+    }
+
     [HttpGet]
     public async Task<ActionResult<List<SchoolDto>>> GetAll()
     {

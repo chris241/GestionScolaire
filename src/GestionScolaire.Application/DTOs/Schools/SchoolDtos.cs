@@ -25,3 +25,7 @@ public record UpdateSchoolRequest(
     [Required] string Currency,
     [Required, Range(0.01, 1000)] decimal DefaultMaxScore
 );
+
+/// Représentation minimale exposée sans authentification (formulaire public de candidature) :
+/// aucune donnée sensible (adresse, devise, DirectorId...).
+public record PublicSchoolDto(Guid Id, string Name);

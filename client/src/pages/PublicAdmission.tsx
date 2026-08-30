@@ -3,12 +3,14 @@ import { Link } from 'react-router-dom';
 import { GraduationCap } from 'lucide-react';
 import { submitPublicApplication } from '../api/publicAdmissions';
 import { fetchOpenAdmissionCampaigns } from '../api/admissionCampaigns';
-import type { OpenAdmissionCampaign } from '../types';
+import { fetchPublicSchools } from '../api/schools';
+import type { OpenAdmissionCampaign, SchoolSummary } from '../types';
 
 const inputClass =
   'rounded-xl border border-border bg-bg px-3.5 py-2.5 text-sm text-slate outline-none focus:border-primary focus:ring-2 focus:ring-primary/20';
 
 const emptyForm = {
+  schoolId: '',
   firstName: '',
   lastName: '',
   dateOfBirth: '',
@@ -28,11 +30,20 @@ export function PublicAdmission() {
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [schools, setSchools] = useState<SchoolSummary[]>([]);
   const [openCampaigns, setOpenCampaigns] = useState<OpenAdmissionCampaign[]>([]);
 
   useEffect(() => {
-    fetchOpenAdmissionCampaigns().then(setOpenCampaigns).catch(() => setOpenCampaigns([]));
+    fetchPublicSchools().then(setSchools).catch(() => setSchools([]));
   }, []);
+
+  useEffect(() => {
+    if (!form.schoolId) {
+      setOpenCampaigns([]);
+      return;
+    }
+    fetchOpenAdmissionCampaigns(form.schoolId).then(setOpenCampaigns).catch(() => setOpenCampaigns([]));
+  }, [form.schoolId]);
 
   const selectedCampaign = openCampaigns.find((c) => c.id === form.admissionCampaignId);
 
@@ -42,6 +53,7 @@ export function PublicAdmission() {
     setError(null);
     try {
       await submitPublicApplication({
+        schoolId: form.schoolId,
         firstName: form.firstName,
         lastName: form.lastName,
         dateOfBirth: form.dateOfBirth,
@@ -97,6 +109,21 @@ export function PublicAdmission() {
 
         <form onSubmit={handleSubmit} className="mt-8 flex flex-col gap-4">
           <div>
+            <h2 className="text-sm font-semibold text-slate">École visée</h2>
+            <select
+              required
+              value={form.schoolId}
+              onChange={(e) => setForm({ ...form, schoolId: e.target.value, admissionCampaignId: '', programId: '' })}
+              className={`${inputClass} mt-3 w-full`}
+            >
+              <option value="" disabled>Sélectionnez un établissement</option>
+              {schools.map((s) => (
+                <option key={s.id} value={s.id}>{s.name}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="border-t border-border pt-4">
             <h2 className="text-sm font-semibold text-slate">Élève</h2>
             <div className="mt-3 grid grid-cols-2 gap-3">
               <input required placeholder="Prénom" value={form.firstName} onChange={(e) => setForm({ ...form, firstName: e.target.value })} className={inputClass} />

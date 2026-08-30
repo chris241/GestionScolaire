@@ -71,6 +71,8 @@ public class AppDbContext : DbContext, IApplicationDbContext
         modelBuilder.Entity<StudentBatch>().HasQueryFilter(b => b.SchoolId == _currentUser.SchoolId);
         modelBuilder.Entity<StudentGroup>().HasQueryFilter(g => g.SchoolId == _currentUser.SchoolId);
         modelBuilder.Entity<Student>().HasQueryFilter(s => s.Class.SchoolId == _currentUser.SchoolId);
+        modelBuilder.Entity<StudentApplicant>().HasQueryFilter(a => a.SchoolId == _currentUser.SchoolId);
+        modelBuilder.Entity<AdmissionCampaign>().HasQueryFilter(c => c.SchoolId == _currentUser.SchoolId);
 
         base.OnModelCreating(modelBuilder);
     }

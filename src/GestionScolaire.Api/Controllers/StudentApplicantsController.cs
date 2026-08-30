@@ -16,10 +16,12 @@ namespace GestionScolaire.Api.Controllers;
 public class StudentApplicantsController : ControllerBase
 {
     private readonly IApplicationDbContext _context;
+    private readonly ICurrentUserService _currentUser;
 
-    public StudentApplicantsController(IApplicationDbContext context)
+    public StudentApplicantsController(IApplicationDbContext context, ICurrentUserService currentUser)
     {
         _context = context;
+        _currentUser = currentUser;
     }
 
     [HttpGet]
@@ -52,11 +54,13 @@ public class StudentApplicantsController : ControllerBase
         var year = await _context.AcademicYears.FindAsync(request.AcademicYearId);
         if (year is null) return NotFound(new { message = "Année académique introuvable." });
 
-        var (campaignError, program) = await ValidateCampaignAndProgramAsync(request.AdmissionCampaignId, request.ProgramId);
+        var schoolId = _currentUser.SchoolId!.Value;
+        var (campaignError, program) = await ValidateCampaignAndProgramAsync(schoolId, request.AdmissionCampaignId, request.ProgramId);
         if (campaignError is not null) return BadRequest(new { message = campaignError });
 
         var applicant = new StudentApplicant
         {
+            SchoolId = schoolId,
             FirstName = request.FirstName,
             LastName = request.LastName,
             DateOfBirth = request.DateOfBirth.AsUtc(),
@@ -88,9 +92,13 @@ public class StudentApplicantsController : ControllerBase
     [EnableRateLimiting("public-form")]
     public async Task<ActionResult<StudentApplicantDto>> CreatePublic(PublicApplicantRequest request)
     {
-        // Visiteur anonyme, donc sans contexte école : StudentApplicant n'est pas encore scopé par école
-        // (prévu en phase 2 du plan multi-établissements), on ignore donc le filtre pour l'instant.
-        var year = await _context.AcademicYears.IgnoreQueryFilters().FirstOrDefaultAsync(y => y.IsCurrent);
+        // Visiteur anonyme, donc sans contexte école : l'école visée est fournie explicitement par le
+        // formulaire (sélecteur d'école), et sert à filtrer manuellement au lieu d'une claim JWT.
+        var schoolExists = await _context.Schools.AnyAsync(s => s.Id == request.SchoolId && s.IsActive);
+        if (!schoolExists) return NotFound(new { message = "École introuvable." });
+
+        var year = await _context.AcademicYears.IgnoreQueryFilters()
+            .FirstOrDefaultAsync(y => y.SchoolId == request.SchoolId && y.IsCurrent);
         if (year is null)
             return StatusCode(StatusCodes.Status503ServiceUnavailable, new { message = "Les candidatures ne sont pas ouvertes pour le moment." });
 
@@ -98,11 +106,12 @@ public class StudentApplicantsController : ControllerBase
         if (dateOfBirth > DateTime.UtcNow)
             return BadRequest(new { message = "Date de naissance invalide." });
 
-        var (campaignError, program) = await ValidateCampaignAndProgramAsync(request.AdmissionCampaignId, request.ProgramId);
+        var (campaignError, program) = await ValidateCampaignAndProgramAsync(request.SchoolId, request.AdmissionCampaignId, request.ProgramId);
         if (campaignError is not null) return BadRequest(new { message = campaignError });
 
         var applicant = new StudentApplicant
         {
+            SchoolId = request.SchoolId,
             FirstName = request.FirstName,
             LastName = request.LastName,
             DateOfBirth = dateOfBirth,
@@ -122,7 +131,9 @@ public class StudentApplicantsController : ControllerBase
         _context.StudentApplicants.Add(applicant);
         await _context.SaveChangesAsync();
 
-        var full = await BaseQuery().FirstAsync(a => a.Id == applicant.Id);
+        // Relecture juste après écriture, toujours sans contexte école (visiteur anonyme) : on sait déjà
+        // à quelle école cette candidature appartient puisqu'on vient de l'y écrire, donc pas de fuite.
+        var full = await BaseQuery().IgnoreQueryFilters().FirstAsync(a => a.Id == applicant.Id);
         return Ok(ToDto(full));
     }
 
@@ -214,19 +225,22 @@ public class StudentApplicantsController : ControllerBase
         return Ok(ToDto(applicant));
     }
 
-    private async Task<(string? Error, AcademicProgram? Program)> ValidateCampaignAndProgramAsync(Guid? campaignId, Guid? programId)
+    /// Le schoolId est fourni explicitement (plutôt que lu depuis la claim JWT) pour que cette validation
+    /// fonctionne à l'identique depuis l'endpoint authentifié (Directeur) et depuis le formulaire public
+    /// (visiteur anonyme, sans claim école) — les deux passent l'école explicitement.
+    private async Task<(string? Error, AcademicProgram? Program)> ValidateCampaignAndProgramAsync(Guid schoolId, Guid? campaignId, Guid? programId)
     {
         if (programId.HasValue)
         {
-            // Peut être appelé depuis le formulaire public (anonyme, sans contexte école) : AcademicProgram
-            // n'est pas non plus scopé côté StudentApplicant pour l'instant (voir phase 2).
-            var program = await _context.AcademicPrograms.IgnoreQueryFilters().FirstOrDefaultAsync(p => p.Id == programId.Value);
+            var program = await _context.AcademicPrograms.IgnoreQueryFilters()
+                .FirstOrDefaultAsync(p => p.Id == programId.Value && p.SchoolId == schoolId);
             if (program is null) return ("Programme introuvable.", null);
         }
 
         if (campaignId.HasValue)
         {
-            var campaign = await _context.AdmissionCampaigns.FindAsync(campaignId.Value);
+            var campaign = await _context.AdmissionCampaigns.IgnoreQueryFilters()
+                .FirstOrDefaultAsync(c => c.Id == campaignId.Value && c.SchoolId == schoolId);
             if (campaign is null) return ("Campagne d'admission introuvable.", null);
 
             var now = DateTime.UtcNow;
@@ -237,7 +251,7 @@ public class StudentApplicantsController : ControllerBase
         return (null, null);
     }
 
-    private IQueryable<StudentApplicant> BaseQuery() => _context.StudentApplicants.IgnoreQueryFilters()
+    private IQueryable<StudentApplicant> BaseQuery() => _context.StudentApplicants
         .Include(a => a.AcademicYear)
         .Include(a => a.Program)
         .Include(a => a.AdmissionCampaign);

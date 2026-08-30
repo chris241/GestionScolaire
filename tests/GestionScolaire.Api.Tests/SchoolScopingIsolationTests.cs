@@ -1,10 +1,12 @@
 using System.Net.Http.Json;
 using GestionScolaire.Api.Tests.Helpers;
+using GestionScolaire.Application.DTOs.Admissions;
 using GestionScolaire.Application.DTOs.AcademicTerms;
 using GestionScolaire.Application.DTOs.AcademicYears;
 using GestionScolaire.Application.DTOs.Auth;
 using GestionScolaire.Application.DTOs.Programs;
 using GestionScolaire.Application.DTOs.Rooms;
+using GestionScolaire.Application.DTOs.Schools;
 using GestionScolaire.Application.DTOs.Students;
 using GestionScolaire.Application.DTOs.StudentBatches;
 using GestionScolaire.Application.DTOs.StudentCategories;
@@ -14,9 +16,10 @@ using Xunit;
 namespace GestionScolaire.Api.Tests;
 
 /// Phase 1 : AcademicYear, AcademicTerm, AcademicProgram, Room, StudentCategory, StudentBatch, StudentGroup
-/// et Student (via Class) sont désormais scopés par école. Ces tests vérifient qu'un directeur tout juste
-/// inscrit, propriétaire d'une école fraîchement créée, ne voit jamais les données déjà seedées pour
-/// Lumière/Génie — c'est la garantie de sécurité la plus importante de cette phase.
+/// et Student (via Class) sont désormais scopés par école. Phase 2 : StudentApplicant et AdmissionCampaign
+/// (avec le formulaire public /candidature qui précise désormais l'école visée). Ces tests vérifient qu'un
+/// directeur tout juste inscrit, propriétaire d'une école fraîchement créée, ne voit jamais les données déjà
+/// seedées pour Lumière/Génie — c'est la garantie de sécurité la plus importante de ces phases.
 [Collection(ApiTestCollection.Name)]
 public class SchoolScopingIsolationTests
 {
@@ -132,6 +135,56 @@ public class SchoolScopingIsolationTests
 
         Assert.NotNull(students);
         Assert.Empty(students!);
+    }
+
+    [Fact]
+    public async Task NewSchool_NeverSeesSeededStudentApplicants()
+    {
+        var client = await RegisterDirectorWithFreshSchoolAsync();
+
+        var applicants = await client.GetFromJsonAsync<List<StudentApplicantDto>>("/api/studentapplicants");
+
+        Assert.NotNull(applicants);
+        Assert.DoesNotContain(applicants!, a => a.LastName is "Andriamanjato" or "Rasolofo" or "Rakotoson");
+    }
+
+    [Fact]
+    public async Task PublicSchoolsEndpoint_ListsSeededActiveSchools()
+    {
+        var client = _factory.CreateClient();
+
+        var schools = await client.GetFromJsonAsync<List<PublicSchoolDto>>("/api/schools/public");
+
+        Assert.NotNull(schools);
+        Assert.Contains(schools!, s => s.Name == "Lumière");
+        Assert.Contains(schools!, s => s.Name == "Génie");
+    }
+
+    [Fact]
+    public async Task PublicOpenCampaigns_AreScopedToTheRequestedSchool_NotLeakedAcrossSchools()
+    {
+        var director = await _factory.CreateClient().AsUserAsync("directeur@ecole.mg");
+        var schools = await director.GetFromJsonAsync<List<SchoolDto>>("/api/schools");
+        var lumiere = schools!.Single(s => s.Name == "Lumière");
+        var genie = schools!.Single(s => s.Name == "Génie");
+
+        var years = await director.GetFromJsonAsync<List<AcademicYearDto>>("/api/academicyears");
+        var currentYear = years!.Single(y => y.IsCurrent);
+
+        var createResponse = await director.PostAsJsonAsync("/api/admissioncampaigns", new CreateAdmissionCampaignRequest(
+            "Campagne Isolation Test", currentYear.Id, DateTime.UtcNow.AddDays(-1), DateTime.UtcNow.AddDays(30)));
+        createResponse.EnsureSuccessStatusCode();
+        var campaign = await createResponse.Content.ReadFromJsonAsync<AdmissionCampaignDto>();
+
+        var anonymousClient = _factory.CreateClient();
+
+        var openForLumiere = await anonymousClient.GetFromJsonAsync<List<OpenAdmissionCampaignDto>>(
+            $"/api/admissioncampaigns/open?schoolId={lumiere.Id}");
+        Assert.Contains(openForLumiere!, c => c.Id == campaign!.Id);
+
+        var openForGenie = await anonymousClient.GetFromJsonAsync<List<OpenAdmissionCampaignDto>>(
+            $"/api/admissioncampaigns/open?schoolId={genie.Id}");
+        Assert.DoesNotContain(openForGenie!, c => c.Id == campaign!.Id);
     }
 
     [Fact]

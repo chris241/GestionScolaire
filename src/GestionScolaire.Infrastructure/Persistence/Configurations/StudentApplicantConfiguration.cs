@@ -17,6 +17,11 @@ public class StudentApplicantConfiguration : IEntityTypeConfiguration<StudentApp
         builder.Property(a => a.LevelAppliedFor).IsRequired().HasMaxLength(50);
         builder.Property(a => a.Status).HasConversion<string>().HasMaxLength(20);
 
+        builder.HasOne(a => a.School)
+            .WithMany()
+            .HasForeignKey(a => a.SchoolId)
+            .OnDelete(DeleteBehavior.Restrict);
+
         builder.HasOne(a => a.AcademicYear)
             .WithMany()
             .HasForeignKey(a => a.AcademicYearId)

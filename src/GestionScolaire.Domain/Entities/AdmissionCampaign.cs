@@ -10,6 +10,9 @@ public class AdmissionCampaign : BaseEntity
     public DateTime StartDate { get; set; }
     public DateTime EndDate { get; set; }
 
+    public Guid SchoolId { get; set; }
+    public School School { get; set; } = null!;
+
     public Guid AcademicYearId { get; set; }
     public AcademicYear AcademicYear { get; set; } = null!;
 

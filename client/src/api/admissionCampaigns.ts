@@ -6,8 +6,8 @@ export async function fetchAdmissionCampaigns(): Promise<AdmissionCampaign[]> {
   return data;
 }
 
-export async function fetchOpenAdmissionCampaigns(): Promise<OpenAdmissionCampaign[]> {
-  const { data } = await apiClient.get<OpenAdmissionCampaign[]>('/admissioncampaigns/open');
+export async function fetchOpenAdmissionCampaigns(schoolId: string): Promise<OpenAdmissionCampaign[]> {
+  const { data } = await apiClient.get<OpenAdmissionCampaign[]>('/admissioncampaigns/open', { params: { schoolId } });
   return data;
 }
 
