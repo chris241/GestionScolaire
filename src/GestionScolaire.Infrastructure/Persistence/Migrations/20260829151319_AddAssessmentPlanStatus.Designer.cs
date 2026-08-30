@@ -3,6 +3,7 @@ using System;
 using GestionScolaire.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace GestionScolaire.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260829151319_AddAssessmentPlanStatus")]
+    partial class AddAssessmentPlanStatus
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -1181,9 +1184,6 @@ namespace GestionScolaire.Infrastructure.Persistence.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
 
-                    b.Property<Guid?>("TeacherId")
-                        .HasColumnType("uuid");
-
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -1192,8 +1192,6 @@ namespace GestionScolaire.Infrastructure.Persistence.Migrations
                     b.HasIndex("AcademicYearId");
 
                     b.HasIndex("ClassId");
-
-                    b.HasIndex("TeacherId");
 
                     b.ToTable("StudentGroups", (string)null);
                 });
@@ -1463,43 +1461,6 @@ namespace GestionScolaire.Infrastructure.Persistence.Migrations
                         .IsUnique();
 
                     b.ToTable("Teachers", (string)null);
-                });
-
-            modelBuilder.Entity("GestionScolaire.Domain.Entities.TeacherLog", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("Description")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<DateTime>("LogDate")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("LogType")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
-
-                    b.Property<Guid>("RecordedByUserId")
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid>("TeacherId")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("TeacherId", "LogDate");
-
-                    b.ToTable("TeacherLogs", (string)null);
                 });
 
             modelBuilder.Entity("GestionScolaire.Domain.Entities.Topic", b =>
@@ -2027,16 +1988,9 @@ namespace GestionScolaire.Infrastructure.Persistence.Migrations
                         .HasForeignKey("ClassId")
                         .OnDelete(DeleteBehavior.Restrict);
 
-                    b.HasOne("GestionScolaire.Domain.Entities.Teacher", "Teacher")
-                        .WithMany()
-                        .HasForeignKey("TeacherId")
-                        .OnDelete(DeleteBehavior.Restrict);
-
                     b.Navigation("AcademicYear");
 
                     b.Navigation("Class");
-
-                    b.Navigation("Teacher");
                 });
 
             modelBuilder.Entity("GestionScolaire.Domain.Entities.StudentGroupMember", b =>
@@ -2146,17 +2100,6 @@ namespace GestionScolaire.Infrastructure.Persistence.Migrations
                         .IsRequired();
 
                     b.Navigation("User");
-                });
-
-            modelBuilder.Entity("GestionScolaire.Domain.Entities.TeacherLog", b =>
-                {
-                    b.HasOne("GestionScolaire.Domain.Entities.Teacher", "Teacher")
-                        .WithMany()
-                        .HasForeignKey("TeacherId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Teacher");
                 });
 
             modelBuilder.Entity("GestionScolaire.Domain.Entities.Topic", b =>

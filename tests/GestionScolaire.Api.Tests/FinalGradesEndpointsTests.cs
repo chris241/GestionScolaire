@@ -50,6 +50,33 @@ public class FinalGradesEndpointsTests
     }
 
     [Fact]
+    public async Task Teacher_GetByCourse_ReturnsPerCourseAggregates_ForOwnClass()
+    {
+        var client = await _factory.CreateClient().AsUserAsync("prof.math@ecole.mg");
+        var classId = (await client.GetFromJsonAsync<List<StudentDto>>("/api/students"))!.First().ClassId;
+
+        var report = await client.GetFromJsonAsync<List<CourseWiseAssessmentDto>>($"/api/finalgrades/class/{classId}/by-course?term=Trimestre 1");
+
+        Assert.NotNull(report);
+        Assert.NotEmpty(report!);
+        Assert.All(report, c => Assert.True(c.StudentsEvaluated > 0));
+        Assert.All(report, c => Assert.True(c.MinAverage <= c.ClassAverage && c.ClassAverage <= c.MaxAverage));
+    }
+
+    [Fact]
+    public async Task Teacher_CannotGetByCourse_ForOtherClass()
+    {
+        var mathTeacher = await _factory.CreateClient().AsUserAsync("prof.math@ecole.mg");
+        var frenchTeacherClient = await _factory.CreateClient().AsUserAsync("prof.francais@ecole.mg");
+
+        var otherClassId = (await frenchTeacherClient.GetFromJsonAsync<List<StudentDto>>("/api/students"))!.First().ClassId;
+
+        var response = await mathTeacher.GetAsync($"/api/finalgrades/class/{otherClassId}/by-course?term=Trimestre 1");
+
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
+    [Fact]
     public async Task Parent_CanGetByStudent_ForOwnChild_ButNotOtherChild()
     {
         var parent1 = await _factory.CreateClient().AsUserAsync("parent1@ecole.mg");

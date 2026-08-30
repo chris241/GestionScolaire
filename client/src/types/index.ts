@@ -136,6 +136,8 @@ export interface StudentGroup {
   academicYearName: string;
   classId: string | null;
   className: string | null;
+  teacherId: string | null;
+  teacherName: string | null;
   memberCount: number;
 }
 
@@ -148,6 +150,14 @@ export interface StudentGroupMember {
 export interface StudentLog {
   id: string;
   studentId: string;
+  logDate: string;
+  logType: string;
+  description: string;
+}
+
+export interface TeacherLog {
+  id: string;
+  teacherId: string;
   logDate: string;
   logType: string;
   description: string;
@@ -350,7 +360,18 @@ export interface AssessmentPlan {
   assessmentGroupId: string;
   assessmentGroupName: string;
   gradingScaleId: string | null;
+  status: AssessmentPlanStatus;
   criteria: AssessmentCriteria[];
+}
+
+export type AssessmentPlanStatus = 'Draft' | 'Scheduled' | 'Completed';
+
+export interface CourseWiseAssessment {
+  courseName: string;
+  classAverage: number;
+  minAverage: number;
+  maxAverage: number;
+  studentsEvaluated: number;
 }
 
 export interface FinalGrade {
@@ -408,6 +429,24 @@ export interface Invoice {
   feeScheduleId: string;
   feeStructureName: string;
   academicTermName: string;
+}
+
+export interface StudentFeeCollection {
+  studentId: string;
+  studentFullName: string;
+  className: string;
+  invoicedAmount: number;
+  paidAmount: number;
+  outstandingAmount: number;
+}
+
+export interface ProgramFeeCollection {
+  programId: string;
+  programName: string;
+  studentCount: number;
+  invoicedAmount: number;
+  paidAmount: number;
+  outstandingAmount: number;
 }
 
 export interface Guardian {

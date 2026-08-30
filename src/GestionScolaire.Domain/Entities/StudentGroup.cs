@@ -14,5 +14,8 @@ public class StudentGroup : BaseEntity
     public Guid? ClassId { get; set; }
     public SchoolClass? Class { get; set; }
 
+    public Guid? TeacherId { get; set; }
+    public Teacher? Teacher { get; set; }
+
     public ICollection<StudentGroupMember> Members { get; set; } = new List<StudentGroupMember>();
 }

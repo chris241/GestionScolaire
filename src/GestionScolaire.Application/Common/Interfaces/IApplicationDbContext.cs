@@ -22,6 +22,7 @@ public interface IApplicationDbContext
     DbSet<StudentGroup> StudentGroups { get; }
     DbSet<StudentGroupMember> StudentGroupMembers { get; }
     DbSet<StudentLog> StudentLogs { get; }
+    DbSet<TeacherLog> TeacherLogs { get; }
     DbSet<StudentApplicant> StudentApplicants { get; }
     DbSet<AcademicProgram> AcademicPrograms { get; }
     DbSet<Room> Rooms { get; }

@@ -7,13 +7,23 @@ import {
   addFeeSchedule,
   generateInvoices,
 } from '../api/feeStructures';
-import { fetchInvoices } from '../api/invoices';
+import { fetchInvoices, fetchStudentCollectionReport, fetchProgramCollectionReport } from '../api/invoices';
+import { fetchStudents } from '../api/students';
 import { fetchAcademicYears } from '../api/academicYears';
 import { fetchAcademicTerms } from '../api/academicTerms';
 import { fetchPrograms } from '../api/programs';
 import { StatusBadge } from '../components/StatusBadge';
 import { formatAmount } from '../lib/format';
-import type { AcademicTerm, AcademicYear, FeeCategory, FeeStructure, Invoice, Program } from '../types';
+import type {
+  AcademicTerm,
+  AcademicYear,
+  FeeCategory,
+  FeeStructure,
+  Invoice,
+  Program,
+  ProgramFeeCollection,
+  StudentFeeCollection,
+} from '../types';
 
 const inputClass =
   'rounded-xl border border-border bg-bg px-3.5 py-2.5 text-sm text-slate outline-none focus:border-primary focus:ring-2 focus:ring-primary/20';
@@ -328,6 +338,132 @@ export function Fees() {
             ))}
           </tbody>
         </table>
+      </div>
+
+      <FeeCollectionReports />
+    </div>
+  );
+}
+
+function FeeCollectionReports() {
+  const [classOptions, setClassOptions] = useState<[string, string][]>([]);
+  const [selectedClassId, setSelectedClassId] = useState('');
+  const [studentReport, setStudentReport] = useState<StudentFeeCollection[]>([]);
+  const [programReport, setProgramReport] = useState<ProgramFeeCollection[]>([]);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetchStudents()
+      .then((students) => {
+        const options = Array.from(new Map(students.map((s) => [s.classId, s.className])).entries());
+        setClassOptions(options);
+      })
+      .catch(() => setError('Impossible de charger les classes.'));
+
+    fetchProgramCollectionReport()
+      .then(setProgramReport)
+      .catch(() => setError('Impossible de charger le rapport par programme.'));
+  }, []);
+
+  useEffect(() => {
+    fetchStudentCollectionReport(selectedClassId || undefined)
+      .then(setStudentReport)
+      .catch(() => setError('Impossible de charger le rapport par élève.'));
+  }, [selectedClassId]);
+
+  const totals = studentReport.reduce(
+    (acc, r) => ({
+      invoiced: acc.invoiced + r.invoicedAmount,
+      paid: acc.paid + r.paidAmount,
+      outstanding: acc.outstanding + r.outstandingAmount,
+    }),
+    { invoiced: 0, paid: 0, outstanding: 0 }
+  );
+
+  return (
+    <div className="mt-6 flex flex-col gap-6">
+      {error && (
+        <div className="rounded-xl border border-danger/20 bg-danger-soft px-4 py-3 text-sm text-danger">
+          {error}
+        </div>
+      )}
+
+      <div className="rounded-2xl border border-border bg-surface p-6 shadow-sm">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h2 className="text-base font-semibold text-slate">Collecte par élève</h2>
+          <select value={selectedClassId} onChange={(e) => setSelectedClassId(e.target.value)} className={inputClass}>
+            <option value="">Toutes les classes</option>
+            {classOptions.map(([id, name]) => (
+              <option key={id} value={id}>{name}</option>
+            ))}
+          </select>
+        </div>
+        <p className="mt-1 text-xs text-slate-soft">
+          Facturé {formatAmount(totals.invoiced)} · Encaissé {formatAmount(totals.paid)} · Restant dû {formatAmount(totals.outstanding)}
+        </p>
+
+        <div className="mt-4 overflow-x-auto rounded-xl border border-border">
+          <table className="w-full text-left text-sm">
+            <thead>
+              <tr className="text-xs uppercase tracking-wide text-slate-soft">
+                <th className="px-4 py-2 font-medium">Élève</th>
+                <th className="px-4 py-2 font-medium">Classe</th>
+                <th className="px-4 py-2 font-medium">Facturé</th>
+                <th className="px-4 py-2 font-medium">Encaissé</th>
+                <th className="px-4 py-2 font-medium">Restant dû</th>
+              </tr>
+            </thead>
+            <tbody>
+              {studentReport.length === 0 && (
+                <tr><td colSpan={5} className="px-4 py-6 text-center text-slate-soft">Aucune donnée.</td></tr>
+              )}
+              {studentReport.map((r) => (
+                <tr key={r.studentId} className="border-t border-border">
+                  <td className="px-4 py-2 font-medium text-slate">{r.studentFullName}</td>
+                  <td className="px-4 py-2 text-slate-soft">{r.className}</td>
+                  <td className="px-4 py-2 text-slate-soft">{formatAmount(r.invoicedAmount)}</td>
+                  <td className="px-4 py-2 text-slate-soft">{formatAmount(r.paidAmount)}</td>
+                  <td className={`px-4 py-2 font-medium ${r.outstandingAmount > 0 ? 'text-danger' : 'text-slate-soft'}`}>
+                    {formatAmount(r.outstandingAmount)}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div className="rounded-2xl border border-border bg-surface p-6 shadow-sm">
+        <h2 className="text-base font-semibold text-slate">Collecte par programme</h2>
+        <div className="mt-4 overflow-x-auto rounded-xl border border-border">
+          <table className="w-full text-left text-sm">
+            <thead>
+              <tr className="text-xs uppercase tracking-wide text-slate-soft">
+                <th className="px-4 py-2 font-medium">Programme</th>
+                <th className="px-4 py-2 font-medium">Élèves</th>
+                <th className="px-4 py-2 font-medium">Facturé</th>
+                <th className="px-4 py-2 font-medium">Encaissé</th>
+                <th className="px-4 py-2 font-medium">Restant dû</th>
+              </tr>
+            </thead>
+            <tbody>
+              {programReport.length === 0 && (
+                <tr><td colSpan={5} className="px-4 py-6 text-center text-slate-soft">Aucune donnée.</td></tr>
+              )}
+              {programReport.map((r) => (
+                <tr key={r.programId} className="border-t border-border">
+                  <td className="px-4 py-2 font-medium text-slate">{r.programName}</td>
+                  <td className="px-4 py-2 text-slate-soft">{r.studentCount}</td>
+                  <td className="px-4 py-2 text-slate-soft">{formatAmount(r.invoicedAmount)}</td>
+                  <td className="px-4 py-2 text-slate-soft">{formatAmount(r.paidAmount)}</td>
+                  <td className={`px-4 py-2 font-medium ${r.outstandingAmount > 0 ? 'text-danger' : 'text-slate-soft'}`}>
+                    {formatAmount(r.outstandingAmount)}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );
