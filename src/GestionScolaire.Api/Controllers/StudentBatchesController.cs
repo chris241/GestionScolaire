@@ -14,10 +14,12 @@ namespace GestionScolaire.Api.Controllers;
 public class StudentBatchesController : ControllerBase
 {
     private readonly IApplicationDbContext _context;
+    private readonly ICurrentUserService _currentUser;
 
-    public StudentBatchesController(IApplicationDbContext context)
+    public StudentBatchesController(IApplicationDbContext context, ICurrentUserService currentUser)
     {
         _context = context;
+        _currentUser = currentUser;
     }
 
     [HttpGet]
@@ -45,7 +47,8 @@ public class StudentBatchesController : ControllerBase
             StartDate = request.StartDate.AsUtc(),
             EndDate = request.EndDate?.AsUtc(),
             Description = request.Description,
-            AcademicYearId = request.AcademicYearId
+            AcademicYearId = request.AcademicYearId,
+            SchoolId = _currentUser.SchoolId!.Value
         };
 
         _context.StudentBatches.Add(batch);

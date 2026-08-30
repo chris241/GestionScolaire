@@ -13,10 +13,12 @@ namespace GestionScolaire.Api.Controllers;
 public class RoomsController : ControllerBase
 {
     private readonly IApplicationDbContext _context;
+    private readonly ICurrentUserService _currentUser;
 
-    public RoomsController(IApplicationDbContext context)
+    public RoomsController(IApplicationDbContext context, ICurrentUserService currentUser)
     {
         _context = context;
+        _currentUser = currentUser;
     }
 
     [HttpGet]
@@ -38,7 +40,8 @@ public class RoomsController : ControllerBase
         {
             Name = request.Name,
             Capacity = request.Capacity,
-            Building = request.Building
+            Building = request.Building,
+            SchoolId = _currentUser.SchoolId!.Value
         };
 
         _context.Rooms.Add(room);

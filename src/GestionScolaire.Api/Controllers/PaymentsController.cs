@@ -92,7 +92,7 @@ public class PaymentsController : ControllerBase
         if (!await _accessPolicy.CanAccessStudentAsync(_currentUser.UserId.Value, _currentUser.Role, studentId))
             return Forbid();
 
-        var payments = await _context.Payments
+        var payments = await _context.Payments.IgnoreQueryFilters()
             .Include(p => p.Student)
             .Where(p => p.StudentId == studentId)
             .OrderByDescending(p => p.DueDate)

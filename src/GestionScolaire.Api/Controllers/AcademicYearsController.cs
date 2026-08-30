@@ -14,10 +14,12 @@ namespace GestionScolaire.Api.Controllers;
 public class AcademicYearsController : ControllerBase
 {
     private readonly IApplicationDbContext _context;
+    private readonly ICurrentUserService _currentUser;
 
-    public AcademicYearsController(IApplicationDbContext context)
+    public AcademicYearsController(IApplicationDbContext context, ICurrentUserService currentUser)
     {
         _context = context;
+        _currentUser = currentUser;
     }
 
     [HttpGet]
@@ -48,7 +50,8 @@ public class AcademicYearsController : ControllerBase
         {
             Name = request.Name,
             StartDate = request.StartDate.AsUtc(),
-            EndDate = request.EndDate.AsUtc()
+            EndDate = request.EndDate.AsUtc(),
+            SchoolId = _currentUser.SchoolId!.Value
         };
 
         _context.AcademicYears.Add(year);

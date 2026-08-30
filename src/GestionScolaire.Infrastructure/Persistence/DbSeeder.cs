@@ -22,23 +22,6 @@ public static class DbSeeder
         };
         context.Subjects.AddRange(subjects);
 
-        var academicYear = new AcademicYear
-        {
-            Name = "2025-2026",
-            StartDate = new DateTime(2025, 9, 1, 0, 0, 0, DateTimeKind.Utc),
-            EndDate = new DateTime(2026, 6, 30, 0, 0, 0, DateTimeKind.Utc),
-            IsCurrent = true
-        };
-        context.AcademicYears.Add(academicYear);
-
-        var academicTerms = new[]
-        {
-            new AcademicTerm { Name = "Trimestre 1", Order = 1, AcademicYear = academicYear, StartDate = new DateTime(2025, 9, 1, 0, 0, 0, DateTimeKind.Utc), EndDate = new DateTime(2025, 12, 19, 0, 0, 0, DateTimeKind.Utc) },
-            new AcademicTerm { Name = "Trimestre 2", Order = 2, AcademicYear = academicYear, StartDate = new DateTime(2026, 1, 5, 0, 0, 0, DateTimeKind.Utc), EndDate = new DateTime(2026, 3, 27, 0, 0, 0, DateTimeKind.Utc) },
-            new AcademicTerm { Name = "Trimestre 3", Order = 3, AcademicYear = academicYear, StartDate = new DateTime(2026, 4, 6, 0, 0, 0, DateTimeKind.Utc), EndDate = new DateTime(2026, 6, 30, 0, 0, 0, DateTimeKind.Utc) },
-        };
-        context.AcademicTerms.AddRange(academicTerms);
-
         var director = new User
         {
             Email = "directeur@ecole.mg",
@@ -68,6 +51,37 @@ public static class DbSeeder
         context.Schools.AddRange(schoolLumiere, schoolGenie);
         director.LastActiveSchoolId = schoolLumiere.Id;
 
+        var academicYear = new AcademicYear
+        {
+            Name = "2025-2026",
+            StartDate = new DateTime(2025, 9, 1, 0, 0, 0, DateTimeKind.Utc),
+            EndDate = new DateTime(2026, 6, 30, 0, 0, 0, DateTimeKind.Utc),
+            IsCurrent = true,
+            School = schoolLumiere
+        };
+        context.AcademicYears.Add(academicYear);
+
+        // Année académique isolée pour la 2ᵉ école, pour prouver le cloisonnement des données entre écoles.
+        var academicYearGenie = new AcademicYear
+        {
+            Name = "2025-2026",
+            StartDate = new DateTime(2025, 9, 1, 0, 0, 0, DateTimeKind.Utc),
+            EndDate = new DateTime(2026, 6, 30, 0, 0, 0, DateTimeKind.Utc),
+            // Pas "courante" : le formulaire public de candidature (pas encore scopé par école, voir phase 2)
+            // pioche la première année IsCurrent tous établissements confondus — éviter toute ambiguïté ici.
+            IsCurrent = false,
+            School = schoolGenie
+        };
+        context.AcademicYears.Add(academicYearGenie);
+
+        var academicTerms = new[]
+        {
+            new AcademicTerm { Name = "Trimestre 1", Order = 1, AcademicYear = academicYear, School = schoolLumiere, StartDate = new DateTime(2025, 9, 1, 0, 0, 0, DateTimeKind.Utc), EndDate = new DateTime(2025, 12, 19, 0, 0, 0, DateTimeKind.Utc) },
+            new AcademicTerm { Name = "Trimestre 2", Order = 2, AcademicYear = academicYear, School = schoolLumiere, StartDate = new DateTime(2026, 1, 5, 0, 0, 0, DateTimeKind.Utc), EndDate = new DateTime(2026, 3, 27, 0, 0, 0, DateTimeKind.Utc) },
+            new AcademicTerm { Name = "Trimestre 3", Order = 3, AcademicYear = academicYear, School = schoolLumiere, StartDate = new DateTime(2026, 4, 6, 0, 0, 0, DateTimeKind.Utc), EndDate = new DateTime(2026, 6, 30, 0, 0, 0, DateTimeKind.Utc) },
+        };
+        context.AcademicTerms.AddRange(academicTerms);
+
         var teacherUsers = new[]
         {
             new User { Email = "prof.math@ecole.mg", PasswordHash = PasswordHasher.Hash("Password123!"), FirstName = "Jean", LastName = "Andria", Role = UserRole.Teacher },
@@ -87,13 +101,28 @@ public static class DbSeeder
             new TeacherSchool { Teacher = teachers[1], School = schoolLumiere },
             new TeacherSchool { Teacher = teachers[1], School = schoolGenie });
 
+        // École par défaut explicite pour le professeur multi-école : évite de dépendre d'un tri
+        // (alphabétique ou par date de rattachement) qui deviendrait ambigu en cas d'égalité.
+        teacherUsers[1].LastActiveSchoolId = schoolLumiere.Id;
+
         var academicProgram = new AcademicProgram
         {
             Name = "Collège Général",
             Code = "COL-GEN",
-            Description = "Programme du collège, du niveau 6ème à la 3ème."
+            Description = "Programme du collège, du niveau 6ème à la 3ème.",
+            School = schoolLumiere
         };
         context.AcademicPrograms.Add(academicProgram);
+
+        // Programme isolé pour la 2ᵉ école, pour prouver le cloisonnement des données entre écoles.
+        var academicProgramGenie = new AcademicProgram
+        {
+            Name = "Collège Général",
+            Code = "COL-GEN",
+            Description = "Programme du collège, du niveau 6ème à la 3ème.",
+            School = schoolGenie
+        };
+        context.AcademicPrograms.Add(academicProgramGenie);
 
         var classes = new[]
         {
@@ -107,8 +136,8 @@ public static class DbSeeder
         {
             Name = "3ème C",
             Level = "3ème",
-            AcademicYear = academicYear,
-            Program = academicProgram,
+            AcademicYear = academicYearGenie,
+            Program = academicProgramGenie,
             Capacity = 30,
             HomeroomTeacher = teachers[1],
             School = schoolGenie
@@ -116,8 +145,8 @@ public static class DbSeeder
 
         var rooms = new[]
         {
-            new Room { Name = "Salle 101", Capacity = 40, Building = "Bâtiment A" },
-            new Room { Name = "Salle 102", Capacity = 40, Building = "Bâtiment A" },
+            new Room { Name = "Salle 101", Capacity = 40, Building = "Bâtiment A", School = schoolLumiere },
+            new Room { Name = "Salle 102", Capacity = 40, Building = "Bâtiment A", School = schoolLumiere },
         };
         context.Rooms.AddRange(rooms);
 
@@ -190,8 +219,8 @@ public static class DbSeeder
 
         var studentCategories = new[]
         {
-            new StudentCategory { Name = "Standard", Description = "Scolarité classique" },
-            new StudentCategory { Name = "Boursier", Description = "Bénéficie d'une bourse d'études" },
+            new StudentCategory { Name = "Standard", Description = "Scolarité classique", School = schoolLumiere },
+            new StudentCategory { Name = "Boursier", Description = "Bénéficie d'une bourse d'études", School = schoolLumiere },
         };
         context.StudentCategories.AddRange(studentCategories);
 
@@ -199,6 +228,7 @@ public static class DbSeeder
         {
             Name = "Promotion 2025-2026",
             AcademicYear = academicYear,
+            School = schoolLumiere,
             StartDate = academicYear.StartDate,
             EndDate = academicYear.EndDate
         };
@@ -249,6 +279,7 @@ public static class DbSeeder
             Name = "Club Sciences",
             GroupType = "Club",
             AcademicYear = academicYear,
+            School = schoolLumiere,
             MaxSize = 20
         };
         context.StudentGroups.Add(studentGroup);

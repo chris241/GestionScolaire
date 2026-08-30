@@ -46,7 +46,7 @@ public class CourseSchedulesController : ControllerBase
     {
         if (!await HasAccessAsync(studentId)) return Forbid();
 
-        var student = await _context.Students.FindAsync(studentId);
+        var student = await _context.Students.IgnoreQueryFilters().FirstOrDefaultAsync(s => s.Id == studentId);
         if (student is null) return NotFound();
 
         var schedules = await BaseQuery()
@@ -63,13 +63,13 @@ public class CourseSchedulesController : ControllerBase
     {
         var course = await _context.Courses.FindAsync(request.CourseId);
         var room = await _context.Rooms.FindAsync(request.RoomId);
-        var teacher = await _context.Teachers.IgnoreQueryFilters().FirstOrDefaultAsync(t => t.Id == request.TeacherId);
+        var teacher = await _context.Teachers.FirstOrDefaultAsync(t => t.Id == request.TeacherId);
         var term = await _context.AcademicTerms.FindAsync(request.AcademicTermId);
 
         if (course is null || room is null || teacher is null || term is null)
             return NotFound(new { message = "Cours, salle, enseignant ou trimestre introuvable." });
 
-        if (request.ClassId.HasValue && await _context.Classes.IgnoreQueryFilters().FirstOrDefaultAsync(c => c.Id == request.ClassId.Value) is null)
+        if (request.ClassId.HasValue && await _context.Classes.FirstOrDefaultAsync(c => c.Id == request.ClassId.Value) is null)
             return NotFound(new { message = "Classe introuvable." });
 
         if (request.EndTime <= request.StartTime)
@@ -125,7 +125,7 @@ public class CourseSchedulesController : ControllerBase
     [Authorize(Roles = "Director")]
     public async Task<ActionResult<AutoPlanScheduleResultDto>> AutoPlan(AutoPlanScheduleRequest request)
     {
-        var schoolClass = await _context.Classes.IgnoreQueryFilters().FirstOrDefaultAsync(c => c.Id == request.ClassId);
+        var schoolClass = await _context.Classes.FirstOrDefaultAsync(c => c.Id == request.ClassId);
         var term = await _context.AcademicTerms.FindAsync(request.AcademicTermId);
         if (schoolClass is null || term is null)
             return NotFound(new { message = "Classe ou trimestre introuvable." });
@@ -136,7 +136,7 @@ public class CourseSchedulesController : ControllerBase
             return NotFound(new { message = "Un ou plusieurs cours sont introuvables." });
 
         var teacherIds = request.Requirements.Select(r => r.TeacherId).Distinct().ToList();
-        var teachers = await _context.Teachers.IgnoreQueryFilters().Include(t => t.User).Where(t => teacherIds.Contains(t.Id)).ToDictionaryAsync(t => t.Id);
+        var teachers = await _context.Teachers.Include(t => t.User).Where(t => teacherIds.Contains(t.Id)).ToDictionaryAsync(t => t.Id);
         if (teacherIds.Any(id => !teachers.ContainsKey(id)))
             return NotFound(new { message = "Un ou plusieurs enseignants sont introuvables." });
 
@@ -232,8 +232,8 @@ public class CourseSchedulesController : ControllerBase
 
         var validCourseIds = (await _context.Courses.Where(c => courseIds.Contains(c.Id)).Select(c => c.Id).ToListAsync()).ToHashSet();
         var validRoomIds = (await _context.Rooms.Where(r => roomIds.Contains(r.Id)).Select(r => r.Id).ToListAsync()).ToHashSet();
-        var validTeacherIds = (await _context.Teachers.IgnoreQueryFilters().Where(t => teacherIds.Contains(t.Id)).Select(t => t.Id).ToListAsync()).ToHashSet();
-        var validClassIds = (await _context.Classes.IgnoreQueryFilters().Where(c => classIds.Contains(c.Id)).Select(c => c.Id).ToListAsync()).ToHashSet();
+        var validTeacherIds = (await _context.Teachers.Where(t => teacherIds.Contains(t.Id)).Select(t => t.Id).ToListAsync()).ToHashSet();
+        var validClassIds = (await _context.Classes.Where(c => classIds.Contains(c.Id)).Select(c => c.Id).ToListAsync()).ToHashSet();
         var validTermIds = (await _context.AcademicTerms.Where(t => termIds.Contains(t.Id)).Select(t => t.Id).ToListAsync()).ToHashSet();
 
         var localKeys = new HashSet<(Guid RoomId, Guid TermId, DayOfWeek Day, TimeOnly Start)>();

@@ -107,7 +107,7 @@ public class InvoicesController : ControllerBase
         return Ok(result);
     }
 
-    private IQueryable<Domain.Entities.Invoice> BaseQuery() => _context.Invoices
+    private IQueryable<Domain.Entities.Invoice> BaseQuery() => _context.Invoices.IgnoreQueryFilters()
         .Include(i => i.Student)
         .Include(i => i.FeeSchedule).ThenInclude(s => s.AcademicTerm)
         .Include(i => i.FeeSchedule).ThenInclude(s => s.FeeStructure);

@@ -14,10 +14,12 @@ namespace GestionScolaire.Api.Controllers;
 public class AcademicTermsController : ControllerBase
 {
     private readonly IApplicationDbContext _context;
+    private readonly ICurrentUserService _currentUser;
 
-    public AcademicTermsController(IApplicationDbContext context)
+    public AcademicTermsController(IApplicationDbContext context, ICurrentUserService currentUser)
     {
         _context = context;
+        _currentUser = currentUser;
     }
 
     [HttpGet]
@@ -49,7 +51,8 @@ public class AcademicTermsController : ControllerBase
             Order = request.Order,
             StartDate = request.StartDate.AsUtc(),
             EndDate = request.EndDate.AsUtc(),
-            AcademicYearId = request.AcademicYearId
+            AcademicYearId = request.AcademicYearId,
+            SchoolId = _currentUser.SchoolId!.Value
         };
 
         _context.AcademicTerms.Add(term);

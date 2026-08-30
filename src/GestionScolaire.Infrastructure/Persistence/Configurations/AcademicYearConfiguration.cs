@@ -12,7 +12,12 @@ public class AcademicYearConfiguration : IEntityTypeConfiguration<AcademicYear>
         builder.HasKey(y => y.Id);
 
         builder.Property(y => y.Name).IsRequired().HasMaxLength(20);
-        builder.HasIndex(y => y.Name).IsUnique();
+        builder.HasIndex(y => new { y.SchoolId, y.Name }).IsUnique();
+
+        builder.HasOne(y => y.School)
+            .WithMany()
+            .HasForeignKey(y => y.SchoolId)
+            .OnDelete(DeleteBehavior.Restrict);
 
         builder.HasMany(y => y.Terms)
             .WithOne(t => t.AcademicYear)

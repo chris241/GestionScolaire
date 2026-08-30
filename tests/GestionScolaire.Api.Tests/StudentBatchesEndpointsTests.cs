@@ -48,10 +48,11 @@ public class StudentBatchesEndpointsTests
     public async Task Parent_CannotCreateBatch()
     {
         var client = await _factory.CreateClient().AsUserAsync("parent1@ecole.mg");
-        var years = await client.GetFromJsonAsync<List<AcademicYearDto>>("/api/academicyears");
 
+        // Le rôle est rejeté avant toute validation de l'année académique : un Guid arbitraire suffit,
+        // et convient d'autant mieux qu'un Parent n'a plus de contexte école pour en lister une vraie.
         var response = await client.PostAsJsonAsync("/api/studentbatches", new CreateStudentBatchRequest(
-            "Interdit", DateTime.UtcNow, null, null, years!.First().Id));
+            "Interdit", DateTime.UtcNow, null, null, Guid.NewGuid()));
 
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
     }

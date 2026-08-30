@@ -118,7 +118,7 @@ public class LeaveApplicationsController : ControllerBase
         return await _accessPolicy.CanAccessStudentAsync(_currentUser.UserId.Value, _currentUser.Role, studentId);
     }
 
-    private IQueryable<StudentLeaveApplication> BaseQuery() => _context.StudentLeaveApplications.Include(l => l.Student);
+    private IQueryable<StudentLeaveApplication> BaseQuery() => _context.StudentLeaveApplications.IgnoreQueryFilters().Include(l => l.Student);
 
     private static LeaveApplicationDto ToDto(StudentLeaveApplication l) => new(
         l.Id, l.StudentId, l.Student.FullName, l.StartDate, l.EndDate, l.Reason,

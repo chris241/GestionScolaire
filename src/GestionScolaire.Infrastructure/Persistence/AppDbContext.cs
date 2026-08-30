@@ -63,6 +63,14 @@ public class AppDbContext : DbContext, IApplicationDbContext
 
         modelBuilder.Entity<SchoolClass>().HasQueryFilter(c => c.SchoolId == _currentUser.SchoolId);
         modelBuilder.Entity<Teacher>().HasQueryFilter(t => t.Schools.Any(ts => ts.SchoolId == _currentUser.SchoolId));
+        modelBuilder.Entity<AcademicYear>().HasQueryFilter(y => y.SchoolId == _currentUser.SchoolId);
+        modelBuilder.Entity<AcademicTerm>().HasQueryFilter(t => t.SchoolId == _currentUser.SchoolId);
+        modelBuilder.Entity<AcademicProgram>().HasQueryFilter(p => p.SchoolId == _currentUser.SchoolId);
+        modelBuilder.Entity<Room>().HasQueryFilter(r => r.SchoolId == _currentUser.SchoolId);
+        modelBuilder.Entity<StudentCategory>().HasQueryFilter(c => c.SchoolId == _currentUser.SchoolId);
+        modelBuilder.Entity<StudentBatch>().HasQueryFilter(b => b.SchoolId == _currentUser.SchoolId);
+        modelBuilder.Entity<StudentGroup>().HasQueryFilter(g => g.SchoolId == _currentUser.SchoolId);
+        modelBuilder.Entity<Student>().HasQueryFilter(s => s.Class.SchoolId == _currentUser.SchoolId);
 
         base.OnModelCreating(modelBuilder);
     }
