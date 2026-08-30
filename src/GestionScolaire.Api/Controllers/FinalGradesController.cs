@@ -106,7 +106,8 @@ public class FinalGradesController : ControllerBase
             .Where(g => g.ClassId == student.ClassId && g.Term == term)
             .ToListAsync();
 
-        var defaultScale = await _context.GradingScales.Include(s => s.Intervals).FirstOrDefaultAsync(s => s.IsDefault);
+        var defaultScale = await _context.GradingScales.IgnoreQueryFilters()
+            .Include(s => s.Intervals).FirstOrDefaultAsync(s => s.IsDefault);
 
         var averages = classmates
             .Select(s => (StudentId: s.Id, Average: GradeAverageCalculator.CalculateGeneralAverage(s.Id, s.FullName, grades.Where(g => g.StudentId == s.Id))))

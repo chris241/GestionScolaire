@@ -8,6 +8,9 @@ public class AssessmentGroup : BaseEntity
     public string Name { get; set; } = string.Empty;
     public decimal Weightage { get; set; } = 100;
 
+    public Guid SchoolId { get; set; }
+    public School School { get; set; } = null!;
+
     public Guid AcademicTermId { get; set; }
     public AcademicTerm AcademicTerm { get; set; } = null!;
 

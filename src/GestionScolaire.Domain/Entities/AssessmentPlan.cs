@@ -10,6 +10,9 @@ public class AssessmentPlan : BaseEntity
     public DateTime PlannedDate { get; set; }
     public AssessmentPlanStatus Status { get; set; } = AssessmentPlanStatus.Draft;
 
+    public Guid SchoolId { get; set; }
+    public School School { get; set; } = null!;
+
     public Guid CourseId { get; set; }
     public Course Course { get; set; } = null!;
 

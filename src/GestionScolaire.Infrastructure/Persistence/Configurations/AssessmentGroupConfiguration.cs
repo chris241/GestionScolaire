@@ -14,6 +14,11 @@ public class AssessmentGroupConfiguration : IEntityTypeConfiguration<AssessmentG
         builder.Property(g => g.Name).IsRequired().HasMaxLength(100);
         builder.Property(g => g.Weightage).HasColumnType("decimal(5,2)");
 
+        builder.HasOne(g => g.School)
+            .WithMany()
+            .HasForeignKey(g => g.SchoolId)
+            .OnDelete(DeleteBehavior.Restrict);
+
         builder.HasOne(g => g.AcademicTerm)
             .WithMany()
             .HasForeignKey(g => g.AcademicTermId)

@@ -56,13 +56,15 @@ public class AttendanceController : ControllerBase
     {
         if (!await HasAccessAsync(studentId)) return Forbid();
 
-        // Peut être appelé par un Parent (sans claim école), déjà vérifié ci-dessus via l'access policy.
-        var attendances = await _context.Attendances.IgnoreQueryFilters()
-            .Include(a => a.Student)
-            .Where(a => a.StudentId == studentId)
-            .OrderByDescending(a => a.Date)
-            .Take(60)
-            .ToListAsync();
+        var query = _context.Attendances.Include(a => a.Student).Where(a => a.StudentId == studentId);
+
+        // Un Parent (déjà vérifié ci-dessus via l'access policy) n'a pas de claim école. Pour tout autre
+        // rôle le filtre reste actif : HasAccessAsync ne vérifie pas l'école pour un Directeur, c'est le
+        // filtre Attendance (via Class) qui referme la frontière multi-tenant ici.
+        if (_currentUser.Role == nameof(UserRole.Parent))
+            query = query.IgnoreQueryFilters();
+
+        var attendances = await query.OrderByDescending(a => a.Date).Take(60).ToListAsync();
 
         return Ok(attendances.Select(a => new AttendanceDto(a.Id, a.StudentId, a.Student.FullName, a.ClassId, a.Date, a.Status.ToString(), a.Comment)));
     }

@@ -64,11 +64,15 @@ public class LeaveApplicationsController : ControllerBase
     {
         if (!await HasAccessAsync(studentId)) return Forbid();
 
-        // Peut être appelé par un Parent (sans claim école), déjà vérifié ci-dessus via l'access policy.
-        var applications = await BaseQuery().IgnoreQueryFilters()
-            .Where(l => l.StudentId == studentId)
-            .OrderByDescending(l => l.CreatedAt)
-            .ToListAsync();
+        var query = BaseQuery().Where(l => l.StudentId == studentId);
+
+        // Un Parent (déjà vérifié ci-dessus via l'access policy) n'a pas de claim école. Pour tout autre
+        // rôle le filtre reste actif : HasAccessAsync ne vérifie pas l'école pour un Directeur, c'est le
+        // filtre StudentLeaveApplication qui referme la frontière multi-tenant ici.
+        if (_currentUser.Role == nameof(UserRole.Parent))
+            query = query.IgnoreQueryFilters();
+
+        var applications = await query.OrderByDescending(l => l.CreatedAt).ToListAsync();
 
         return Ok(applications.Select(ToDto));
     }

@@ -15,6 +15,11 @@ public class AssessmentPlanConfiguration : IEntityTypeConfiguration<AssessmentPl
         builder.Property(p => p.MaxScore).HasColumnType("decimal(6,2)");
         builder.Property(p => p.Status).HasConversion<string>().HasMaxLength(20);
 
+        builder.HasOne(p => p.School)
+            .WithMany()
+            .HasForeignKey(p => p.SchoolId)
+            .OnDelete(DeleteBehavior.Restrict);
+
         builder.HasOne(p => p.Course)
             .WithMany()
             .HasForeignKey(p => p.CourseId)

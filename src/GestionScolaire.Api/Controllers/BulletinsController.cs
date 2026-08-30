@@ -39,7 +39,15 @@ public class BulletinsController : ControllerBase
         if (!await _accessPolicy.CanAccessStudentAsync(_currentUser.UserId.Value, _currentUser.Role, studentId))
             return Forbid();
 
-        var student = await _context.Students.IgnoreQueryFilters()
+        // Un Parent (déjà vérifié ci-dessus via l'access policy) n'a pas de claim école. Pour tout autre
+        // rôle le filtre reste actif : CanAccessStudentAsync ne vérifie pas l'école pour un Directeur,
+        // ce sont les filtres Student/Grade qui referment la frontière multi-tenant ici.
+        var isParent = _currentUser.Role == nameof(UserRole.Parent);
+
+        var studentQuery = _context.Students.AsQueryable();
+        if (isParent) studentQuery = studentQuery.IgnoreQueryFilters();
+
+        var student = await studentQuery
             .Include(s => s.Class).ThenInclude(c => c.AcademicYear)
             .FirstOrDefaultAsync(s => s.Id == studentId);
 
@@ -50,7 +58,10 @@ public class BulletinsController : ControllerBase
             .Select(s => s.Id)
             .ToListAsync();
 
-        var termGrades = await _context.Grades.IgnoreQueryFilters()
+        var gradesQuery = _context.Grades.AsQueryable();
+        if (isParent) gradesQuery = gradesQuery.IgnoreQueryFilters();
+
+        var termGrades = await gradesQuery
             .Include(g => g.Subject)
             .Where(g => classmateIds.Contains(g.StudentId) && g.Term == term)
             .ToListAsync();

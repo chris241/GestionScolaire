@@ -13,10 +13,12 @@ namespace GestionScolaire.Api.Controllers;
 public class GradingScalesController : ControllerBase
 {
     private readonly IApplicationDbContext _context;
+    private readonly ICurrentUserService _currentUser;
 
-    public GradingScalesController(IApplicationDbContext context)
+    public GradingScalesController(IApplicationDbContext context, ICurrentUserService currentUser)
     {
         _context = context;
+        _currentUser = currentUser;
     }
 
     [HttpGet]
@@ -30,7 +32,7 @@ public class GradingScalesController : ControllerBase
     [Authorize(Roles = "Director")]
     public async Task<ActionResult<GradingScaleDto>> Create(CreateGradingScaleRequest request)
     {
-        var scale = new GradingScale { Name = request.Name, IsDefault = request.IsDefault };
+        var scale = new GradingScale { Name = request.Name, IsDefault = request.IsDefault, SchoolId = _currentUser.SchoolId!.Value };
 
         if (request.IsDefault)
         {

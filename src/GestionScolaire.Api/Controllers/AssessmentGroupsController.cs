@@ -13,10 +13,12 @@ namespace GestionScolaire.Api.Controllers;
 public class AssessmentGroupsController : ControllerBase
 {
     private readonly IApplicationDbContext _context;
+    private readonly ICurrentUserService _currentUser;
 
-    public AssessmentGroupsController(IApplicationDbContext context)
+    public AssessmentGroupsController(IApplicationDbContext context, ICurrentUserService currentUser)
     {
         _context = context;
+        _currentUser = currentUser;
     }
 
     [HttpGet]
@@ -42,7 +44,8 @@ public class AssessmentGroupsController : ControllerBase
         {
             Name = request.Name,
             Weightage = request.Weightage,
-            AcademicTermId = request.AcademicTermId
+            AcademicTermId = request.AcademicTermId,
+            SchoolId = _currentUser.SchoolId!.Value
         };
 
         _context.AssessmentGroups.Add(group);

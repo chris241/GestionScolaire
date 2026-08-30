@@ -43,11 +43,15 @@ public class CourseEnrollmentsController : ControllerBase
     {
         if (!await HasAccessAsync(studentId)) return Forbid();
 
-        // Le Parent (sans claim école) accède aux inscriptions de son propre enfant, déjà vérifié ci-dessus.
-        var enrollments = await BaseQuery().IgnoreQueryFilters()
-            .Where(e => e.StudentId == studentId)
-            .OrderBy(e => e.Course.Name)
-            .ToListAsync();
+        var query = BaseQuery().Where(e => e.StudentId == studentId);
+
+        // Un Parent (déjà vérifié ci-dessus via l'access policy) n'a pas de claim école. Pour tout autre
+        // rôle le filtre reste actif : HasAccessAsync ne vérifie pas l'école pour un Directeur, c'est le
+        // filtre CourseEnrollment qui referme la frontière multi-tenant ici.
+        if (_currentUser.Role == nameof(UserRole.Parent))
+            query = query.IgnoreQueryFilters();
+
+        var enrollments = await query.OrderBy(e => e.Course.Name).ToListAsync();
 
         return Ok(enrollments.Select(ToDto));
     }

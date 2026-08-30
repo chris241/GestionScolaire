@@ -12,6 +12,11 @@ public class GradingScaleConfiguration : IEntityTypeConfiguration<GradingScale>
         builder.HasKey(s => s.Id);
 
         builder.Property(s => s.Name).IsRequired().HasMaxLength(100);
+
+        builder.HasOne(s => s.School)
+            .WithMany()
+            .HasForeignKey(s => s.SchoolId)
+            .OnDelete(DeleteBehavior.Restrict);
     }
 }
 

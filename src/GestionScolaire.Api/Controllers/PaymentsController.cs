@@ -92,9 +92,15 @@ public class PaymentsController : ControllerBase
         if (!await _accessPolicy.CanAccessStudentAsync(_currentUser.UserId.Value, _currentUser.Role, studentId))
             return Forbid();
 
-        var payments = await _context.Payments.IgnoreQueryFilters()
-            .Include(p => p.Student)
-            .Where(p => p.StudentId == studentId)
+        var query = _context.Payments.Include(p => p.Student).Where(p => p.StudentId == studentId);
+
+        // Un Parent (déjà vérifié ci-dessus via l'access policy) n'a pas de claim école. Pour tout autre
+        // rôle le filtre reste actif : CanAccessStudentAsync ne vérifie pas l'école pour un Directeur,
+        // c'est le filtre Student (via Class) qui referme la frontière multi-tenant ici.
+        if (_currentUser.Role == nameof(UserRole.Parent))
+            query = query.IgnoreQueryFilters();
+
+        var payments = await query
             .OrderByDescending(p => p.DueDate)
             .Select(p => new PaymentDto(
                 p.Id, p.StudentId, p.Student.FullName, p.Description,

@@ -80,6 +80,10 @@ public class AppDbContext : DbContext, IApplicationDbContext
         modelBuilder.Entity<CourseEnrollment>().HasQueryFilter(e => e.SchoolId == _currentUser.SchoolId);
         modelBuilder.Entity<Attendance>().HasQueryFilter(a => a.Class.SchoolId == _currentUser.SchoolId);
         modelBuilder.Entity<StudentLeaveApplication>().HasQueryFilter(l => l.SchoolId == _currentUser.SchoolId);
+        modelBuilder.Entity<GradingScale>().HasQueryFilter(s => s.SchoolId == _currentUser.SchoolId);
+        modelBuilder.Entity<AssessmentGroup>().HasQueryFilter(g => g.SchoolId == _currentUser.SchoolId);
+        modelBuilder.Entity<AssessmentPlan>().HasQueryFilter(p => p.SchoolId == _currentUser.SchoolId);
+        modelBuilder.Entity<Grade>().HasQueryFilter(g => g.Class.SchoolId == _currentUser.SchoolId);
 
         base.OnModelCreating(modelBuilder);
     }

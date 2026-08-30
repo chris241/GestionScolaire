@@ -185,7 +185,7 @@ public static class DbSeeder
             });
         }
 
-        var gradingScale = new GradingScale { Name = "Barème standard", IsDefault = true };
+        var gradingScale = new GradingScale { Name = "Barème standard", IsDefault = true, School = schoolLumiere };
         context.GradingScales.Add(gradingScale);
         context.GradingScaleIntervals.AddRange(
             new GradingScaleInterval { GradingScale = gradingScale, Grade = "A", MinScore = 16, MaxScore = 20 },
@@ -196,8 +196,8 @@ public static class DbSeeder
 
         var assessmentGroups = new[]
         {
-            new AssessmentGroup { Name = "Devoirs", Weightage = 40, AcademicTerm = academicTerms[0] },
-            new AssessmentGroup { Name = "Compositions", Weightage = 60, AcademicTerm = academicTerms[0] },
+            new AssessmentGroup { Name = "Devoirs", Weightage = 40, AcademicTerm = academicTerms[0], School = schoolLumiere },
+            new AssessmentGroup { Name = "Compositions", Weightage = 60, AcademicTerm = academicTerms[0], School = schoolLumiere },
         };
         context.AssessmentGroups.AddRange(assessmentGroups);
 
@@ -212,7 +212,8 @@ public static class DbSeeder
             GradingScale = gradingScale,
             MaxScore = 20,
             PlannedDate = DateTime.UtcNow.AddDays(-11),
-            Status = AssessmentPlanStatus.Completed
+            Status = AssessmentPlanStatus.Completed,
+            School = schoolLumiere
         };
         context.AssessmentPlans.Add(assessmentPlan);
         context.AssessmentCriteria.AddRange(
