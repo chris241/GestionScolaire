@@ -13,6 +13,11 @@ public class AdmissionCampaignConfiguration : IEntityTypeConfiguration<Admission
 
         builder.Property(c => c.Name).IsRequired().HasMaxLength(150);
 
+        builder.HasOne(c => c.School)
+            .WithMany()
+            .HasForeignKey(c => c.SchoolId)
+            .OnDelete(DeleteBehavior.Restrict);
+
         builder.HasOne(c => c.AcademicYear)
             .WithMany()
             .HasForeignKey(c => c.AcademicYearId)

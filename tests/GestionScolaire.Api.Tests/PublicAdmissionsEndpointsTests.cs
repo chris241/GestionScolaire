@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Json;
 using GestionScolaire.Api.Tests.Helpers;
 using GestionScolaire.Application.DTOs.Admissions;
+using GestionScolaire.Application.DTOs.Schools;
 using GestionScolaire.Domain.Enums;
 using Xunit;
 
@@ -24,9 +25,11 @@ public class PublicAdmissionsEndpointsTests
     public async Task Public_CanSubmitApplication_WithoutAuthentication_AndAppearsInDirectorList()
     {
         var anonymousClient = _factory.CreateClient();
+        var schools = await anonymousClient.GetFromJsonAsync<List<PublicSchoolDto>>("/api/schools/public");
+        var lumiere = schools!.Single(s => s.Name == "Lumière");
 
         var response = await anonymousClient.PostAsJsonAsync("/api/studentapplicants/public", new PublicApplicantRequest(
-            "Candidat", "PortailPublic", new DateTime(2014, 4, 12), Gender.Masculin,
+            lumiere.Id, "Candidat", "PortailPublic", new DateTime(2014, 4, 12), Gender.Masculin,
             null, null, "Parent DePortailPublic", null, "034 55 555 55", "5ème", null, null));
 
         response.EnsureSuccessStatusCode();

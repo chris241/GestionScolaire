@@ -16,6 +16,9 @@ public class StudentApplicant : BaseEntity
     public string? GuardianPhone { get; set; }
     public string LevelAppliedFor { get; set; } = string.Empty;
 
+    public Guid SchoolId { get; set; }
+    public School School { get; set; } = null!;
+
     public Guid AcademicYearId { get; set; }
     public AcademicYear AcademicYear { get; set; } = null!;
 

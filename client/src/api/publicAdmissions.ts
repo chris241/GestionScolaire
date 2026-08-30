@@ -3,6 +3,7 @@ import { apiClient } from './client';
 const GENDER_VALUES: Record<'Masculin' | 'Feminin', number> = { Masculin: 1, Feminin: 2 };
 
 export async function submitPublicApplication(request: {
+  schoolId: string;
   firstName: string;
   lastName: string;
   dateOfBirth: string;

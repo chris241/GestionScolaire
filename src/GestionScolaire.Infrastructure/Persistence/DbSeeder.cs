@@ -504,6 +504,7 @@ public static class DbSeeder
                 GuardianPhone = "034 00 000 01",
                 LevelAppliedFor = "6ème",
                 AcademicYear = academicYear,
+                School = schoolLumiere,
                 Status = AdmissionStatus.Submitted
             },
             new StudentApplicant
@@ -516,6 +517,7 @@ public static class DbSeeder
                 GuardianPhone = "034 00 000 02",
                 LevelAppliedFor = "5ème",
                 AcademicYear = academicYear,
+                School = schoolLumiere,
                 Status = AdmissionStatus.UnderReview
             },
             new StudentApplicant
@@ -528,6 +530,7 @@ public static class DbSeeder
                 GuardianPhone = "034 00 000 03",
                 LevelAppliedFor = "6ème",
                 AcademicYear = academicYear,
+                School = schoolLumiere,
                 Status = AdmissionStatus.Rejected,
                 DecisionDate = DateTime.UtcNow.AddDays(-3),
                 DecisionNotes = "Places déjà complètes pour ce niveau."

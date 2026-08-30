@@ -3,6 +3,7 @@ using System.Net.Http.Json;
 using GestionScolaire.Api.Tests.Helpers;
 using GestionScolaire.Application.DTOs.Admissions;
 using GestionScolaire.Application.DTOs.AcademicYears;
+using GestionScolaire.Application.DTOs.Auth;
 using GestionScolaire.Application.DTOs.Programs;
 using GestionScolaire.Domain.Enums;
 using Xunit;
@@ -26,6 +27,12 @@ public class AdmissionCampaignsEndpointsTests
         return (year.Id, program.Id);
     }
 
+    private static async Task<Guid> GetActiveSchoolIdAsync(HttpClient client)
+    {
+        var me = await client.GetFromJsonAsync<UserDto>("/api/auth/me");
+        return me!.ActiveSchoolId!.Value;
+    }
+
     [Fact]
     public async Task Director_CanCreateCampaign_SetQuota_AndSeeItInOpenList()
     {
@@ -47,7 +54,8 @@ public class AdmissionCampaignsEndpointsTests
         Assert.Equal(0, quota.Used);
         Assert.Equal(1, quota.Remaining);
 
-        var openList = await client.GetFromJsonAsync<List<OpenAdmissionCampaignDto>>("/api/admissioncampaigns/open");
+        var schoolId = await GetActiveSchoolIdAsync(client);
+        var openList = await client.GetFromJsonAsync<List<OpenAdmissionCampaignDto>>($"/api/admissioncampaigns/open?schoolId={schoolId}");
         var openEntry = Assert.Single(openList!, c => c.Id == campaign.Id);
         Assert.Contains(openEntry.Programs, p => p.Id == programId);
     }
