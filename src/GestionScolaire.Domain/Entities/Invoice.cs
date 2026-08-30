@@ -17,5 +17,8 @@ public class Invoice : BaseEntity
     public PaymentStatus Status { get; set; } = PaymentStatus.EnAttente;
     public DateTime GeneratedAt { get; set; } = DateTime.UtcNow;
 
+    public Guid SchoolId { get; set; }
+    public School School { get; set; } = null!;
+
     public ICollection<Payment> Payments { get; set; } = new List<Payment>();
 }

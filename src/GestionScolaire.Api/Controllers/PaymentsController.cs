@@ -62,6 +62,7 @@ public class PaymentsController : ControllerBase
         var payment = new Payment
         {
             StudentId = request.StudentId,
+            SchoolId = _currentUser.SchoolId!.Value,
             Description = request.Description,
             Amount = request.Amount,
             AcademicYear = request.AcademicYear,

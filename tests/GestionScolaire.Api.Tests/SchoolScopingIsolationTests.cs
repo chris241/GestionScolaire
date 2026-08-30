@@ -10,9 +10,13 @@ using GestionScolaire.Application.DTOs.Auth;
 using GestionScolaire.Application.DTOs.CourseEnrollments;
 using GestionScolaire.Application.DTOs.CourseSchedules;
 using GestionScolaire.Application.DTOs.Courses;
+using GestionScolaire.Application.DTOs.FeeCategories;
+using GestionScolaire.Application.DTOs.FeeStructures;
 using GestionScolaire.Application.DTOs.Grades;
 using GestionScolaire.Application.DTOs.GradingScales;
+using GestionScolaire.Application.DTOs.Invoices;
 using GestionScolaire.Application.DTOs.LeaveApplications;
+using GestionScolaire.Application.DTOs.Payments;
 using GestionScolaire.Application.DTOs.ProgramEnrollments;
 using GestionScolaire.Application.DTOs.Programs;
 using GestionScolaire.Application.DTOs.Rooms;
@@ -31,9 +35,11 @@ namespace GestionScolaire.Api.Tests;
 /// (avec le formulaire public /candidature qui précise désormais l'école visée). Phase 3 : Subject, Course,
 /// CourseSchedule, ProgramEnrollment, CourseEnrollment. Phase 4 : Attendance (via Class, sans colonne
 /// propre) et StudentLeaveApplication. Phase 5 : GradingScale, AssessmentGroup, AssessmentPlan (colonne
-/// propre) et Grade (via Class, sans colonne propre). Ces tests vérifient qu'un directeur tout juste
-/// inscrit, propriétaire d'une école fraîchement créée, ne voit jamais les données déjà seedées pour
-/// Lumière/Génie — c'est la garantie de sécurité la plus importante de ces phases.
+/// propre) et Grade (via Class, sans colonne propre). Phase 6 : FeeCategory, Invoice, Payment (colonne
+/// propre) ; FeeStructure (via AcademicYear) et FeeSchedule (via AcademicTerm), sans colonne propre.
+/// Ces tests vérifient qu'un directeur tout juste inscrit, propriétaire d'une école fraîchement créée,
+/// ne voit jamais les données déjà seedées pour Lumière/Génie — c'est la garantie de sécurité la plus
+/// importante de ces phases.
 [Collection(ApiTestCollection.Name)]
 public class SchoolScopingIsolationTests
 {
@@ -366,5 +372,65 @@ public class SchoolScopingIsolationTests
 
         Assert.NotNull(grades);
         Assert.Empty(grades!);
+    }
+
+    [Fact]
+    public async Task NewSchool_NeverSeesSeededFeeCategories()
+    {
+        var client = await RegisterDirectorWithFreshSchoolAsync();
+
+        var categories = await client.GetFromJsonAsync<List<FeeCategoryDto>>("/api/feecategories");
+
+        Assert.NotNull(categories);
+        Assert.DoesNotContain(categories!, c => c.Name is "Scolarité" or "Cantine" or "Transport");
+    }
+
+    [Fact]
+    public async Task NewSchool_NeverSeesSeededFeeStructures()
+    {
+        var client = await RegisterDirectorWithFreshSchoolAsync();
+
+        var structures = await client.GetFromJsonAsync<List<FeeStructureDto>>("/api/feestructures");
+
+        Assert.NotNull(structures);
+        Assert.DoesNotContain(structures!, s => s.Name == "Frais standard 2025-2026");
+    }
+
+    [Fact]
+    public async Task NewSchool_DirectorCannotSeeLumieresInvoices_ByGuessingItsStudentId()
+    {
+        // Invoice a désormais sa propre colonne SchoolId (aucun ancrage fiable à un seul niveau
+        // n'existait : Student et FeeSchedule sont tous deux à 2 sauts d'une vraie colonne SchoolId).
+        // Ce test vérifie que le filtre protège bien même quand IStudentAccessPolicy laisse passer
+        // n'importe quel Directeur sans vérifier l'école — la vulnérabilité corrigée en Phase 5.
+        var lumiereDirector = await _factory.CreateClient().AsUserAsync("directeur@ecole.mg");
+        var lumiereStudents = await lumiereDirector.GetFromJsonAsync<List<StudentDto>>("/api/students");
+        var lumiereStudentId = lumiereStudents!.First().Id;
+
+        var client = await RegisterDirectorWithFreshSchoolAsync();
+
+        var response = await client.GetAsync($"/api/invoices/student/{lumiereStudentId}");
+        response.EnsureSuccessStatusCode();
+        var invoices = await response.Content.ReadFromJsonAsync<List<InvoiceDto>>();
+
+        Assert.NotNull(invoices);
+        Assert.Empty(invoices!);
+    }
+
+    [Fact]
+    public async Task NewSchool_DirectorCannotSeeLumieresPayments_ByGuessingItsStudentId()
+    {
+        var lumiereDirector = await _factory.CreateClient().AsUserAsync("directeur@ecole.mg");
+        var lumiereStudents = await lumiereDirector.GetFromJsonAsync<List<StudentDto>>("/api/students");
+        var lumiereStudentId = lumiereStudents!.First().Id;
+
+        var client = await RegisterDirectorWithFreshSchoolAsync();
+
+        var response = await client.GetAsync($"/api/payments/student/{lumiereStudentId}");
+        response.EnsureSuccessStatusCode();
+        var payments = await response.Content.ReadFromJsonAsync<List<PaymentDto>>();
+
+        Assert.NotNull(payments);
+        Assert.Empty(payments!);
     }
 }

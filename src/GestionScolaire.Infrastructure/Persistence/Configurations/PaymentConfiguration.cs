@@ -24,6 +24,11 @@ public class PaymentConfiguration : IEntityTypeConfiguration<Payment>
             .HasForeignKey(p => p.InvoiceId)
             .OnDelete(DeleteBehavior.SetNull);
 
+        builder.HasOne(p => p.School)
+            .WithMany()
+            .HasForeignKey(p => p.SchoolId)
+            .OnDelete(DeleteBehavior.Restrict);
+
         builder.HasIndex(p => p.Status);
     }
 }

@@ -22,4 +22,7 @@ public class Payment : BaseEntity
     /// Rattachement optionnel à une facture générée ; les paiements existants restent non rattachés (null).
     public Guid? InvoiceId { get; set; }
     public Invoice? Invoice { get; set; }
+
+    public Guid SchoolId { get; set; }
+    public School School { get; set; } = null!;
 }

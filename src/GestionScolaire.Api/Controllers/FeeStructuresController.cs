@@ -13,10 +13,12 @@ namespace GestionScolaire.Api.Controllers;
 public class FeeStructuresController : ControllerBase
 {
     private readonly IApplicationDbContext _context;
+    private readonly ICurrentUserService _currentUser;
 
-    public FeeStructuresController(IApplicationDbContext context)
+    public FeeStructuresController(IApplicationDbContext context, ICurrentUserService currentUser)
     {
         _context = context;
+        _currentUser = currentUser;
     }
 
     [HttpGet]
@@ -149,6 +151,7 @@ public class FeeStructuresController : ControllerBase
             {
                 StudentId = student.Id,
                 FeeScheduleId = scheduleId,
+                SchoolId = _currentUser.SchoolId!.Value,
                 InvoiceNumber = $"FAC-{schedule.Id.ToString()[..8].ToUpperInvariant()}-{student.EnrollmentNumber}",
                 TotalAmount = totalAmount,
                 DueDate = schedule.DueDate

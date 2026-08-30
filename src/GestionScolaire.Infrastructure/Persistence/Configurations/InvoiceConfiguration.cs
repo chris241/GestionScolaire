@@ -25,6 +25,11 @@ public class InvoiceConfiguration : IEntityTypeConfiguration<Invoice>
             .HasForeignKey(i => i.FeeScheduleId)
             .OnDelete(DeleteBehavior.Restrict);
 
+        builder.HasOne(i => i.School)
+            .WithMany()
+            .HasForeignKey(i => i.SchoolId)
+            .OnDelete(DeleteBehavior.Restrict);
+
         builder.HasIndex(i => new { i.StudentId, i.FeeScheduleId }).IsUnique();
     }
 }
