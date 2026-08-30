@@ -76,11 +76,18 @@ public class StudentsController : ControllerBase
     {
         if (!await HasAccessAsync(studentId)) return Forbid();
 
-        var links = await _context.StudentSiblings.IgnoreQueryFilters()
+        var siblingsQuery = _context.StudentSiblings
             .Include(s => s.Student).ThenInclude(s => s.Class)
             .Include(s => s.SiblingStudent).ThenInclude(s => s.Class)
-            .Where(s => s.StudentId == studentId || s.SiblingStudentId == studentId)
-            .ToListAsync();
+            .Where(s => s.StudentId == studentId || s.SiblingStudentId == studentId);
+
+        // Un Parent (déjà vérifié ci-dessus via l'access policy) n'a pas de claim école. Pour tout autre
+        // rôle le filtre reste actif : HasAccessAsync ne vérifie pas l'école pour un Directeur, ce sont
+        // les filtres Student (via Class) sur les deux navigations qui referment la frontière ici.
+        if (_currentUser.Role == nameof(UserRole.Parent))
+            siblingsQuery = siblingsQuery.IgnoreQueryFilters();
+
+        var links = await siblingsQuery.ToListAsync();
 
         var siblings = links
             .Select(l => l.StudentId == studentId ? l.SiblingStudent : l.Student)

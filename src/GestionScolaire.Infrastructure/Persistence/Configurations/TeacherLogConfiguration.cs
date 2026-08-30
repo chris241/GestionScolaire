@@ -19,6 +19,11 @@ public class TeacherLogConfiguration : IEntityTypeConfiguration<TeacherLog>
             .HasForeignKey(l => l.TeacherId)
             .OnDelete(DeleteBehavior.Cascade);
 
+        builder.HasOne(l => l.School)
+            .WithMany()
+            .HasForeignKey(l => l.SchoolId)
+            .OnDelete(DeleteBehavior.Restrict);
+
         builder.HasIndex(l => new { l.TeacherId, l.LogDate });
     }
 }

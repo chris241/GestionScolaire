@@ -1,6 +1,7 @@
 using GestionScolaire.Application.Common.Interfaces;
 using GestionScolaire.Application.DTOs.Guardians;
 using GestionScolaire.Domain.Entities;
+using GestionScolaire.Domain.Enums;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -46,7 +47,8 @@ public class GuardiansController : ControllerBase
             Phone = request.Phone,
             Email = request.Email,
             Occupation = request.Occupation,
-            AreasOfInterest = request.AreasOfInterest
+            AreasOfInterest = request.AreasOfInterest,
+            SchoolId = _currentUser.SchoolId!.Value
         };
 
         _context.Guardians.Add(guardian);
@@ -86,9 +88,15 @@ public class GuardiansController : ControllerBase
     {
         if (!await HasAccessAsync(studentId)) return Forbid();
 
-        var links = await _context.StudentGuardians
-            .Include(sg => sg.Guardian)
-            .Where(sg => sg.StudentId == studentId)
+        var query = _context.StudentGuardians.Include(sg => sg.Guardian).Where(sg => sg.StudentId == studentId);
+
+        // Un Parent (déjà vérifié ci-dessus via l'access policy) n'a pas de claim école. Pour tout autre
+        // rôle le filtre reste actif : HasAccessAsync ne vérifie pas l'école pour un Directeur, c'est le
+        // filtre StudentGuardian (via Guardian) qui referme la frontière multi-tenant ici.
+        if (_currentUser.Role == nameof(UserRole.Parent))
+            query = query.IgnoreQueryFilters();
+
+        var links = await query
             .OrderByDescending(sg => sg.IsPrimaryContact)
             .Select(sg => new StudentGuardianDto(
                 sg.Id, sg.GuardianId, sg.Guardian.FullName, sg.Guardian.Phone, sg.Guardian.Email, sg.Guardian.Occupation, sg.Guardian.AreasOfInterest,
