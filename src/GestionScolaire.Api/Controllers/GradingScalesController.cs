@@ -90,6 +90,10 @@ public class GradingScalesController : ControllerBase
         var interval = await _context.GradingScaleIntervals.FindAsync(intervalId);
         if (interval is null) return NotFound();
 
+        // GradingScaleInterval n'a pas son propre filtre (enfant pur de GradingScale) : on vérifie
+        // explicitement que le barème parent est bien accessible dans l'école active.
+        if (await _context.GradingScales.FindAsync(interval.GradingScaleId) is null) return NotFound();
+
         _context.GradingScaleIntervals.Remove(interval);
         await _context.SaveChangesAsync();
 

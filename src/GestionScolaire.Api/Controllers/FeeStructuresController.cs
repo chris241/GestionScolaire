@@ -77,6 +77,10 @@ public class FeeStructuresController : ControllerBase
         var item = await _context.FeeStructureItems.FindAsync(itemId);
         if (item is null) return NotFound();
 
+        // FeeStructureItem n'a pas son propre filtre (enfant pur de FeeStructure) : on vérifie
+        // explicitement que la structure parente est bien accessible dans l'école active.
+        if (await _context.FeeStructures.FindAsync(item.FeeStructureId) is null) return NotFound();
+
         _context.FeeStructureItems.Remove(item);
         await _context.SaveChangesAsync();
 

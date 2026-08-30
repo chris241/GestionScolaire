@@ -154,6 +154,10 @@ public class AdmissionCampaignsController : ControllerBase
         var quota = await _context.AdmissionCampaignQuotas.FindAsync(quotaId);
         if (quota is null) return NotFound();
 
+        // AdmissionCampaignQuota n'a pas son propre filtre (enfant pur de AdmissionCampaign) : on
+        // vérifie explicitement que la campagne parente est bien accessible dans l'école active.
+        if (await _context.AdmissionCampaigns.FindAsync(quota.AdmissionCampaignId) is null) return NotFound();
+
         _context.AdmissionCampaignQuotas.Remove(quota);
         await _context.SaveChangesAsync();
 

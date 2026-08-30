@@ -78,7 +78,10 @@ public class BulletinsController : ControllerBase
     {
         if (!await CanAccessClassAsync(classId)) return Forbid();
 
-        var schoolClass = await _context.Classes.IgnoreQueryFilters()
+        // Route Directeur/Enseignant uniquement (aucun Parent n'atteint cet endpoint) : les filtres
+        // restent actifs, CanAccessClassAsync ne vérifie pas l'école pour un Directeur, ce sont les
+        // filtres SchoolClass/Grade qui referment la frontière multi-tenant ici.
+        var schoolClass = await _context.Classes
             .Include(c => c.AcademicYear)
             .FirstOrDefaultAsync(c => c.Id == classId);
         if (schoolClass is null) return NotFound(new { message = "Classe introuvable." });
@@ -91,7 +94,7 @@ public class BulletinsController : ControllerBase
         if (students.Count == 0) return NotFound(new { message = "Aucun élève actif dans cette classe." });
 
         var studentIds = students.Select(s => s.Id).ToList();
-        var termGrades = await _context.Grades.IgnoreQueryFilters()
+        var termGrades = await _context.Grades
             .Include(g => g.Subject)
             .Where(g => studentIds.Contains(g.StudentId) && g.Term == term)
             .ToListAsync();

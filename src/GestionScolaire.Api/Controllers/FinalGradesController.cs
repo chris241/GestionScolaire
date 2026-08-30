@@ -96,18 +96,27 @@ public class FinalGradesController : ControllerBase
     {
         if (!await HasAccessAsync(studentId)) return Forbid();
 
-        var student = await _context.Students.IgnoreQueryFilters().FirstOrDefaultAsync(s => s.Id == studentId);
+        // Un Parent (déjà vérifié ci-dessus via l'access policy) n'a pas de claim école. Pour tout autre
+        // rôle les filtres restent actifs : HasAccessAsync ne vérifie pas l'école pour un Directeur, ce
+        // sont les filtres Student/Grade/GradingScale qui referment la frontière multi-tenant ici.
+        var isParent = _currentUser.Role == nameof(UserRole.Parent);
+
+        var studentQuery = _context.Students.Where(s => s.Id == studentId);
+        if (isParent) studentQuery = studentQuery.IgnoreQueryFilters();
+        var student = await studentQuery.FirstOrDefaultAsync();
         if (student is null) return NotFound();
 
-        var classmates = await _context.Students.IgnoreQueryFilters().Where(s => s.ClassId == student.ClassId && s.IsActive).ToListAsync();
+        var classmatesQuery = _context.Students.Where(s => s.ClassId == student.ClassId && s.IsActive);
+        if (isParent) classmatesQuery = classmatesQuery.IgnoreQueryFilters();
+        var classmates = await classmatesQuery.ToListAsync();
 
-        var grades = await _context.Grades.IgnoreQueryFilters()
-            .Include(g => g.Subject)
-            .Where(g => g.ClassId == student.ClassId && g.Term == term)
-            .ToListAsync();
+        var gradesQuery = _context.Grades.Include(g => g.Subject).Where(g => g.ClassId == student.ClassId && g.Term == term);
+        if (isParent) gradesQuery = gradesQuery.IgnoreQueryFilters();
+        var grades = await gradesQuery.ToListAsync();
 
-        var defaultScale = await _context.GradingScales.IgnoreQueryFilters()
-            .Include(s => s.Intervals).FirstOrDefaultAsync(s => s.IsDefault);
+        var scaleQuery = _context.GradingScales.Include(s => s.Intervals).Where(s => s.IsDefault);
+        if (isParent) scaleQuery = scaleQuery.IgnoreQueryFilters();
+        var defaultScale = await scaleQuery.FirstOrDefaultAsync();
 
         var averages = classmates
             .Select(s => (StudentId: s.Id, Average: GradeAverageCalculator.CalculateGeneralAverage(s.Id, s.FullName, grades.Where(g => g.StudentId == s.Id))))

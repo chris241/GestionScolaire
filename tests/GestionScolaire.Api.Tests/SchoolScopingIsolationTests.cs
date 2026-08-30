@@ -12,6 +12,7 @@ using GestionScolaire.Application.DTOs.CourseSchedules;
 using GestionScolaire.Application.DTOs.Courses;
 using GestionScolaire.Application.DTOs.FeeCategories;
 using GestionScolaire.Application.DTOs.FeeStructures;
+using GestionScolaire.Application.DTOs.FinalGrades;
 using GestionScolaire.Application.DTOs.Grades;
 using GestionScolaire.Application.DTOs.GradingScales;
 using GestionScolaire.Application.DTOs.Guardians;
@@ -506,5 +507,66 @@ public class SchoolScopingIsolationTests
 
         Assert.NotNull(logs);
         Assert.Empty(logs!);
+    }
+
+    [Fact]
+    public async Task NewSchool_DirectorCannotSeeLumieresFinalGrades_ByGuessingItsStudentId()
+    {
+        // Trouvée pendant l'audit final de Phase 8 : FinalGradesController.GetByStudent avait QUATRE
+        // .IgnoreQueryFilters() inconditionnels (Student, camarades de classe, Grade, GradingScale) alors
+        // que IStudentAccessPolicy laisse passer n'importe quel Directeur sans vérifier l'école — la fuite
+        // la plus large trouvée cette phase, puisqu'elle exposait aussi le classement de toute la classe,
+        // pas seulement les notes de l'élève ciblé.
+        var lumiereDirector = await _factory.CreateClient().AsUserAsync("directeur@ecole.mg");
+        var lumiereStudents = await lumiereDirector.GetFromJsonAsync<List<StudentDto>>("/api/students");
+        var lumiereStudentId = lumiereStudents!.First().Id;
+
+        var client = await RegisterDirectorWithFreshSchoolAsync();
+
+        var response = await client.GetAsync($"/api/finalgrades/student/{lumiereStudentId}?term=Trimestre%201");
+
+        Assert.Equal(System.Net.HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task NewSchool_DirectorCannotSeeLumieresGroupMembers_ByGuessingItsGroupId()
+    {
+        // Trouvée pendant l'audit final de Phase 8 : StudentGroupsController.GetMembers ne vérifiait pas
+        // du tout que le StudentGroup appartenait à l'école active avant de renvoyer ses membres (aucun
+        // filtre, aucune vérification d'accès) — n'importe quel utilisateur authentifié pouvait lister les
+        // membres de n'importe quel groupe d'une autre école en devinant son id.
+        var lumiereDirector = await _factory.CreateClient().AsUserAsync("directeur@ecole.mg");
+        var lumiereGroups = await lumiereDirector.GetFromJsonAsync<List<GestionScolaire.Application.DTOs.StudentGroups.StudentGroupDto>>("/api/studentgroups");
+        var lumiereGroupId = lumiereGroups!.First().Id;
+
+        var client = await RegisterDirectorWithFreshSchoolAsync();
+
+        var response = await client.GetAsync($"/api/studentgroups/{lumiereGroupId}/members");
+
+        Assert.Equal(System.Net.HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task NewSchool_DirectorCannotDeleteLumieresGradingScaleInterval_ByGuessingItsId()
+    {
+        // Trouvée pendant l'audit final de Phase 8 : GradingScaleInterval est un enfant pur de
+        // GradingScale (aucune colonne SchoolId propre). DeleteInterval ne vérifiait pas que le barème
+        // parent appartenait à l'école active avant suppression — un Directeur d'une autre école pouvait
+        // altérer les données d'une autre école en devinant un intervalId. Même famille de correctif pour
+        // Topic (via Course), FeeStructureItem (via FeeStructure), AdmissionCampaignQuota (via
+        // AdmissionCampaign) et StudentGroupMember (via StudentGroup, testé ci-dessus côté lecture).
+        var lumiereDirector = await _factory.CreateClient().AsUserAsync("directeur@ecole.mg");
+        var lumiereScales = await lumiereDirector.GetFromJsonAsync<List<GradingScaleDto>>("/api/gradingscales");
+        var lumiereIntervalId = lumiereScales!.First().Intervals.First().Id;
+
+        var client = await RegisterDirectorWithFreshSchoolAsync();
+
+        var response = await client.DeleteAsync($"/api/gradingscales/intervals/{lumiereIntervalId}");
+
+        Assert.Equal(System.Net.HttpStatusCode.NotFound, response.StatusCode);
+
+        // L'intervalle de Lumière doit toujours exister : la tentative de suppression cross-tenant n'a pas abouti.
+        var scalesAfter = await lumiereDirector.GetFromJsonAsync<List<GradingScaleDto>>("/api/gradingscales");
+        Assert.Contains(scalesAfter!.First().Intervals, i => i.Id == lumiereIntervalId);
     }
 }
