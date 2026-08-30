@@ -3,10 +3,12 @@ using GestionScolaire.Api.Tests.Helpers;
 using GestionScolaire.Application.DTOs.Admissions;
 using GestionScolaire.Application.DTOs.AcademicTerms;
 using GestionScolaire.Application.DTOs.AcademicYears;
+using GestionScolaire.Application.DTOs.Attendances;
 using GestionScolaire.Application.DTOs.Auth;
 using GestionScolaire.Application.DTOs.CourseEnrollments;
 using GestionScolaire.Application.DTOs.CourseSchedules;
 using GestionScolaire.Application.DTOs.Courses;
+using GestionScolaire.Application.DTOs.LeaveApplications;
 using GestionScolaire.Application.DTOs.ProgramEnrollments;
 using GestionScolaire.Application.DTOs.Programs;
 using GestionScolaire.Application.DTOs.Rooms;
@@ -23,9 +25,10 @@ namespace GestionScolaire.Api.Tests;
 /// Phase 1 : AcademicYear, AcademicTerm, AcademicProgram, Room, StudentCategory, StudentBatch, StudentGroup
 /// et Student (via Class) sont désormais scopés par école. Phase 2 : StudentApplicant et AdmissionCampaign
 /// (avec le formulaire public /candidature qui précise désormais l'école visée). Phase 3 : Subject, Course,
-/// CourseSchedule, ProgramEnrollment, CourseEnrollment. Ces tests vérifient qu'un directeur tout juste
-/// inscrit, propriétaire d'une école fraîchement créée, ne voit jamais les données déjà seedées pour
-/// Lumière/Génie — c'est la garantie de sécurité la plus importante de ces phases.
+/// CourseSchedule, ProgramEnrollment, CourseEnrollment. Phase 4 : Attendance (via Class, sans colonne
+/// propre) et StudentLeaveApplication. Ces tests vérifient qu'un directeur tout juste inscrit, propriétaire
+/// d'une école fraîchement créée, ne voit jamais les données déjà seedées pour Lumière/Génie — c'est la
+/// garantie de sécurité la plus importante de ces phases.
 [Collection(ApiTestCollection.Name)]
 public class SchoolScopingIsolationTests
 {
@@ -246,6 +249,37 @@ public class SchoolScopingIsolationTests
 
         Assert.NotNull(enrollments);
         Assert.Empty(enrollments!);
+    }
+
+    [Fact]
+    public async Task NewSchool_NeverSeesSeededLeaveApplications()
+    {
+        var client = await RegisterDirectorWithFreshSchoolAsync();
+
+        var applications = await client.GetFromJsonAsync<List<LeaveApplicationDto>>("/api/leaveapplications");
+
+        Assert.NotNull(applications);
+        Assert.Empty(applications!);
+    }
+
+    [Fact]
+    public async Task NewSchool_DirectorCannotSeeLumieresAttendance_ByGuessingItsClassId()
+    {
+        // Attendance n'a pas sa propre colonne SchoolId (scopée via Class, comme Student) : ce test vérifie
+        // spécifiquement que le filtre à un niveau protège bien même quand CanAccessClassAsync laisse
+        // passer n'importe quel Directeur sans vérifier que la classe appartient à son école active.
+        var lumiereDirector = await _factory.CreateClient().AsUserAsync("directeur@ecole.mg");
+        var lumiereStudents = await lumiereDirector.GetFromJsonAsync<List<StudentDto>>("/api/students");
+        var lumiereClassId = lumiereStudents!.First().ClassId;
+
+        var client = await RegisterDirectorWithFreshSchoolAsync();
+
+        var response = await client.GetAsync($"/api/attendance?classId={lumiereClassId}&date={DateTime.UtcNow:O}");
+        response.EnsureSuccessStatusCode();
+        var records = await response.Content.ReadFromJsonAsync<List<AttendanceDto>>();
+
+        Assert.NotNull(records);
+        Assert.Empty(records!);
     }
 
     [Fact]

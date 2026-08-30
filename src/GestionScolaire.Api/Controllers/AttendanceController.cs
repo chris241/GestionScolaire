@@ -56,7 +56,8 @@ public class AttendanceController : ControllerBase
     {
         if (!await HasAccessAsync(studentId)) return Forbid();
 
-        var attendances = await _context.Attendances
+        // Peut être appelé par un Parent (sans claim école), déjà vérifié ci-dessus via l'access policy.
+        var attendances = await _context.Attendances.IgnoreQueryFilters()
             .Include(a => a.Student)
             .Where(a => a.StudentId == studentId)
             .OrderByDescending(a => a.Date)
@@ -135,7 +136,7 @@ public class AttendanceController : ControllerBase
 
         var day = date.AsUtc().Date;
 
-        var query = _context.Attendances.IgnoreQueryFilters()
+        var query = _context.Attendances
             .Include(a => a.Student)
             .Include(a => a.Class)
             .Where(a => a.Date == day && a.Status != AttendanceStatus.Present);
@@ -146,7 +147,7 @@ public class AttendanceController : ControllerBase
         }
         else if (_currentUser.Role == nameof(UserRole.Teacher))
         {
-            var teacherClassIds = _context.Classes.IgnoreQueryFilters()
+            var teacherClassIds = _context.Classes
                 .Where(c => c.HomeroomTeacher != null && c.HomeroomTeacher.UserId == _currentUser.UserId)
                 .Select(c => c.Id);
 
@@ -238,7 +239,7 @@ public class AttendanceController : ControllerBase
     {
         if (_currentUser.Role != nameof(UserRole.Teacher)) return true;
 
-        return await _context.Classes.IgnoreQueryFilters().AnyAsync(c =>
+        return await _context.Classes.AnyAsync(c =>
             c.Id == classId && c.HomeroomTeacher != null && c.HomeroomTeacher.UserId == _currentUser.UserId);
     }
 }

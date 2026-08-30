@@ -78,6 +78,8 @@ public class AppDbContext : DbContext, IApplicationDbContext
         modelBuilder.Entity<CourseSchedule>().HasQueryFilter(s => s.SchoolId == _currentUser.SchoolId);
         modelBuilder.Entity<ProgramEnrollment>().HasQueryFilter(e => e.SchoolId == _currentUser.SchoolId);
         modelBuilder.Entity<CourseEnrollment>().HasQueryFilter(e => e.SchoolId == _currentUser.SchoolId);
+        modelBuilder.Entity<Attendance>().HasQueryFilter(a => a.Class.SchoolId == _currentUser.SchoolId);
+        modelBuilder.Entity<StudentLeaveApplication>().HasQueryFilter(l => l.SchoolId == _currentUser.SchoolId);
 
         base.OnModelCreating(modelBuilder);
     }

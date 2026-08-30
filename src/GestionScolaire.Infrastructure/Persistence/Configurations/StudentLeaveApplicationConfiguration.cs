@@ -14,6 +14,11 @@ public class StudentLeaveApplicationConfiguration : IEntityTypeConfiguration<Stu
         builder.Property(l => l.Reason).IsRequired();
         builder.Property(l => l.Status).HasConversion<string>().HasMaxLength(20);
 
+        builder.HasOne(l => l.School)
+            .WithMany()
+            .HasForeignKey(l => l.SchoolId)
+            .OnDelete(DeleteBehavior.Restrict);
+
         builder.HasIndex(l => new { l.StudentId, l.Status });
     }
 }
