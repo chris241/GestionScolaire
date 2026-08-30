@@ -25,4 +25,14 @@ public class CurrentUserService : ICurrentUserService
 
     public string? Role => _httpContextAccessor.HttpContext?.User?.Claims
         .FirstOrDefault(c => c.Type == ClaimTypes.Role)?.Value;
+
+    public Guid? SchoolId
+    {
+        get
+        {
+            var value = _httpContextAccessor.HttpContext?.User?.Claims
+                .FirstOrDefault(c => c.Type == "schoolId")?.Value;
+            return Guid.TryParse(value, out var id) ? id : null;
+        }
+    }
 }

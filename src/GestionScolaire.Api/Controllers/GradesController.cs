@@ -144,7 +144,7 @@ public class GradesController : ControllerBase
     private async Task<Guid?> ResolveTeacherIdAsync()
     {
         var email = User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value;
-        var teacher = await _context.Teachers
+        var teacher = await _context.Teachers.IgnoreQueryFilters()
             .Include(t => t.User)
             .FirstOrDefaultAsync(t => t.User.Email == email);
 

@@ -39,13 +39,6 @@ public static class DbSeeder
         };
         context.AcademicTerms.AddRange(academicTerms);
 
-        context.EducationSettings.Add(new EducationSettings
-        {
-            SchoolName = "Établissement Scolaire",
-            Currency = "MGA",
-            DefaultMaxScore = 20
-        });
-
         var director = new User
         {
             Email = "directeur@ecole.mg",
@@ -55,6 +48,25 @@ public static class DbSeeder
             Role = UserRole.Director
         };
         context.Users.Add(director);
+
+        var schoolLumiere = new School
+        {
+            Name = "Lumière",
+            Address = "Antananarivo",
+            Currency = "MGA",
+            DefaultMaxScore = 20,
+            Director = director
+        };
+        var schoolGenie = new School
+        {
+            Name = "Génie",
+            Address = "Fianarantsoa",
+            Currency = "MGA",
+            DefaultMaxScore = 20,
+            Director = director
+        };
+        context.Schools.AddRange(schoolLumiere, schoolGenie);
+        director.LastActiveSchoolId = schoolLumiere.Id;
 
         var teacherUsers = new[]
         {
@@ -70,6 +82,11 @@ public static class DbSeeder
         };
         context.Teachers.AddRange(teachers);
 
+        context.TeacherSchools.AddRange(
+            new TeacherSchool { Teacher = teachers[0], School = schoolLumiere },
+            new TeacherSchool { Teacher = teachers[1], School = schoolLumiere },
+            new TeacherSchool { Teacher = teachers[1], School = schoolGenie });
+
         var academicProgram = new AcademicProgram
         {
             Name = "Collège Général",
@@ -80,10 +97,22 @@ public static class DbSeeder
 
         var classes = new[]
         {
-            new SchoolClass { Name = "6ème A", Level = "6ème", AcademicYear = academicYear, Program = academicProgram, Capacity = 35, HomeroomTeacher = teachers[0] },
-            new SchoolClass { Name = "5ème B", Level = "5ème", AcademicYear = academicYear, Program = academicProgram, Capacity = 35, HomeroomTeacher = teachers[1] },
+            new SchoolClass { Name = "6ème A", Level = "6ème", AcademicYear = academicYear, Program = academicProgram, Capacity = 35, HomeroomTeacher = teachers[0], School = schoolLumiere },
+            new SchoolClass { Name = "5ème B", Level = "5ème", AcademicYear = academicYear, Program = academicProgram, Capacity = 35, HomeroomTeacher = teachers[1], School = schoolLumiere },
         };
         context.Classes.AddRange(classes);
+
+        // Classe isolée dans la 2ᵉ école, pour prouver le cloisonnement des données entre écoles.
+        context.Classes.Add(new SchoolClass
+        {
+            Name = "3ème C",
+            Level = "3ème",
+            AcademicYear = academicYear,
+            Program = academicProgram,
+            Capacity = 30,
+            HomeroomTeacher = teachers[1],
+            School = schoolGenie
+        });
 
         var rooms = new[]
         {

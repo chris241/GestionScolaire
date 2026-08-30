@@ -39,7 +39,7 @@ public class BulletinsController : ControllerBase
         if (!await _accessPolicy.CanAccessStudentAsync(_currentUser.UserId.Value, _currentUser.Role, studentId))
             return Forbid();
 
-        var student = await _context.Students
+        var student = await _context.Students.IgnoreQueryFilters()
             .Include(s => s.Class).ThenInclude(c => c.AcademicYear)
             .FirstOrDefaultAsync(s => s.Id == studentId);
 
@@ -67,7 +67,7 @@ public class BulletinsController : ControllerBase
     {
         if (!await CanAccessClassAsync(classId)) return Forbid();
 
-        var schoolClass = await _context.Classes
+        var schoolClass = await _context.Classes.IgnoreQueryFilters()
             .Include(c => c.AcademicYear)
             .FirstOrDefaultAsync(c => c.Id == classId);
         if (schoolClass is null) return NotFound(new { message = "Classe introuvable." });
@@ -149,7 +149,7 @@ public class BulletinsController : ControllerBase
     {
         if (_currentUser.Role != nameof(UserRole.Teacher)) return true;
 
-        return await _context.Classes.AnyAsync(c =>
+        return await _context.Classes.IgnoreQueryFilters().AnyAsync(c =>
             c.Id == classId && c.HomeroomTeacher != null && c.HomeroomTeacher.UserId == _currentUser.UserId);
     }
 }

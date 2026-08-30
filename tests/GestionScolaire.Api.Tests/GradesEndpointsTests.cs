@@ -119,7 +119,7 @@ public class GradesEndpointsTests
         // on va donc chercher le véritable Teacher.Id directement en base pour ce test.
         using var scope = _factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        var teacherId = await db.Teachers
+        var teacherId = await db.Teachers.IgnoreQueryFilters()
             .Where(t => t.User.Email == "prof.francais@ecole.mg")
             .Select(t => t.Id)
             .SingleAsync();

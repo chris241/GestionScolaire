@@ -18,7 +18,7 @@ public class JwtTokenService : IJwtTokenService
         _settings = settings.Value;
     }
 
-    public string GenerateAccessToken(User user)
+    public string GenerateAccessToken(User user, Guid? schoolId)
     {
         var claims = new List<Claim>
         {
@@ -28,6 +28,11 @@ public class JwtTokenService : IJwtTokenService
             new(ClaimTypes.Name, user.FullName),
             new(ClaimTypes.Role, user.Role.ToString())
         };
+
+        if (schoolId.HasValue)
+        {
+            claims.Add(new Claim("schoolId", schoolId.Value.ToString()));
+        }
 
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_settings.Secret));
         var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);

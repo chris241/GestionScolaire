@@ -44,7 +44,7 @@ public class LeaveApplicationsController : ControllerBase
         }
         else if (_currentUser.Role == nameof(UserRole.Teacher))
         {
-            var teacherClassIds = _context.Classes
+            var teacherClassIds = _context.Classes.IgnoreQueryFilters()
                 .Where(c => c.HomeroomTeacher != null && c.HomeroomTeacher.UserId == _currentUser.UserId)
                 .Select(c => c.Id);
 

@@ -1,4 +1,5 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import type { ReactNode } from 'react';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AuthProvider } from './lib/AuthContext';
 import { ProtectedRoute } from './lib/ProtectedRoute';
 import { AppLayout } from './components/AppLayout';
@@ -8,6 +9,7 @@ import { Students } from './pages/Students';
 import { Payments } from './pages/Payments';
 import { Grades } from './pages/Grades';
 import { Settings } from './pages/Settings';
+import { Schools } from './pages/Schools';
 import { StudentGroups } from './pages/StudentGroups';
 import { Admissions } from './pages/Admissions';
 import { Programs } from './pages/Programs';
@@ -29,6 +31,18 @@ function HomeRoute() {
   return <Dashboard />;
 }
 
+// Un Directeur sans aucune école ne peut rien faire d'autre que d'en créer une.
+function RequireSchoolGuard({ children }: { children: ReactNode }) {
+  const { user } = useAuth();
+  const location = useLocation();
+
+  if (user?.role === 'Director' && (user.availableSchools?.length ?? 0) === 0 && location.pathname !== '/ecoles') {
+    return <Navigate to="/ecoles" replace />;
+  }
+
+  return <>{children}</>;
+}
+
 function App() {
   return (
     <BrowserRouter>
@@ -40,24 +54,27 @@ function App() {
             path="/*"
             element={
               <ProtectedRoute>
-                <AppLayout>
-                  <Routes>
-                    <Route path="/" element={<HomeRoute />} />
-                    <Route path="/eleves" element={<Students />} />
-                    <Route path="/notes" element={<Grades />} />
-                    <Route path="/paiements" element={<Payments />} />
-                    <Route path="/parametres" element={<Settings />} />
-                    <Route path="/groupes" element={<StudentGroups />} />
-                    <Route path="/admissions" element={<Admissions />} />
-                    <Route path="/programmes" element={<Programs />} />
-                    <Route path="/cours" element={<Courses />} />
-                    <Route path="/emploi-du-temps" element={<Schedule />} />
-                    <Route path="/presences" element={<Attendance />} />
-                    <Route path="/resultats" element={<FinalGrades />} />
-                    <Route path="/frais" element={<Fees />} />
-                    <Route path="/enseignants" element={<Teachers />} />
-                  </Routes>
-                </AppLayout>
+                <RequireSchoolGuard>
+                  <AppLayout>
+                    <Routes>
+                      <Route path="/" element={<HomeRoute />} />
+                      <Route path="/eleves" element={<Students />} />
+                      <Route path="/notes" element={<Grades />} />
+                      <Route path="/paiements" element={<Payments />} />
+                      <Route path="/parametres" element={<Settings />} />
+                      <Route path="/ecoles" element={<Schools />} />
+                      <Route path="/groupes" element={<StudentGroups />} />
+                      <Route path="/admissions" element={<Admissions />} />
+                      <Route path="/programmes" element={<Programs />} />
+                      <Route path="/cours" element={<Courses />} />
+                      <Route path="/emploi-du-temps" element={<Schedule />} />
+                      <Route path="/presences" element={<Attendance />} />
+                      <Route path="/resultats" element={<FinalGrades />} />
+                      <Route path="/frais" element={<Fees />} />
+                      <Route path="/enseignants" element={<Teachers />} />
+                    </Routes>
+                  </AppLayout>
+                </RequireSchoolGuard>
               </ProtectedRoute>
             }
           />

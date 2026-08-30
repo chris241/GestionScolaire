@@ -6,8 +6,11 @@ namespace GestionScolaire.Infrastructure.Persistence;
 
 public class AppDbContext : DbContext, IApplicationDbContext
 {
-    public AppDbContext(DbContextOptions<AppDbContext> options) : base(options)
+    private readonly ICurrentUserService _currentUser;
+
+    public AppDbContext(DbContextOptions<AppDbContext> options, ICurrentUserService currentUser) : base(options)
     {
+        _currentUser = currentUser;
     }
 
     public DbSet<User> Users => Set<User>();
@@ -21,7 +24,8 @@ public class AppDbContext : DbContext, IApplicationDbContext
     public DbSet<Payment> Payments => Set<Payment>();
     public DbSet<AcademicYear> AcademicYears => Set<AcademicYear>();
     public DbSet<AcademicTerm> AcademicTerms => Set<AcademicTerm>();
-    public DbSet<EducationSettings> EducationSettings => Set<EducationSettings>();
+    public DbSet<School> Schools => Set<School>();
+    public DbSet<TeacherSchool> TeacherSchools => Set<TeacherSchool>();
     public DbSet<StudentCategory> StudentCategories => Set<StudentCategory>();
     public DbSet<StudentBatch> StudentBatches => Set<StudentBatch>();
     public DbSet<StudentGroup> StudentGroups => Set<StudentGroup>();
@@ -56,6 +60,10 @@ public class AppDbContext : DbContext, IApplicationDbContext
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(AppDbContext).Assembly);
+
+        modelBuilder.Entity<SchoolClass>().HasQueryFilter(c => c.SchoolId == _currentUser.SchoolId);
+        modelBuilder.Entity<Teacher>().HasQueryFilter(t => t.Schools.Any(ts => ts.SchoolId == _currentUser.SchoolId));
+
         base.OnModelCreating(modelBuilder);
     }
 

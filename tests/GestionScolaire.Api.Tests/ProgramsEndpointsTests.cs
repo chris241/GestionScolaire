@@ -25,7 +25,7 @@ public class ProgramsEndpointsTests
 
         Assert.NotNull(programs);
         var seeded = Assert.Single(programs!, p => p.Code == "COL-GEN");
-        Assert.Equal(2, seeded.ClassCount);
+        Assert.Equal(3, seeded.ClassCount);
         Assert.Equal(5, seeded.CourseCount);
     }
 

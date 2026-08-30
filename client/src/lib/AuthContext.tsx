@@ -1,12 +1,13 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 import type { UserProfile } from '../types';
-import { login as loginRequest } from '../api/auth';
+import { login as loginRequest, switchSchool as switchSchoolRequest } from '../api/auth';
 
 interface AuthContextValue {
   user: UserProfile | null;
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
   logout: () => void;
+  switchSchool: (schoolId: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -53,8 +54,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
   }
 
+  async function switchSchool(schoolId: string) {
+    setLoading(true);
+    try {
+      const response = await switchSchoolRequest(schoolId);
+      localStorage.setItem('accessToken', response.accessToken);
+      localStorage.setItem('refreshToken', response.refreshToken);
+      localStorage.setItem('user', JSON.stringify(response.user));
+      setUser(response.user);
+      // Recharge la page : toutes les données déjà affichées (effectifs, listes...) ont été
+      // chargées sous l'ancienne école active et doivent être re-fetchées avec le nouveau contexte.
+      window.location.reload();
+    } finally {
+      setLoading(false);
+    }
+  }
+
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout }}>
+    <AuthContext.Provider value={{ user, loading, login, logout, switchSchool }}>
       {children}
     </AuthContext.Provider>
   );

@@ -17,5 +17,10 @@ public class SchoolClassConfiguration : IEntityTypeConfiguration<SchoolClass>
             .WithOne(s => s.Class)
             .HasForeignKey(s => s.ClassId)
             .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasOne(c => c.School)
+            .WithMany()
+            .HasForeignKey(c => c.SchoolId)
+            .OnDelete(DeleteBehavior.Restrict);
     }
 }

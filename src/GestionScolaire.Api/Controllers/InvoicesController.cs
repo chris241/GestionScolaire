@@ -50,7 +50,7 @@ public class InvoicesController : ControllerBase
     [Authorize(Roles = "Director")]
     public async Task<ActionResult<List<StudentFeeCollectionDto>>> GetStudentCollectionReport([FromQuery] Guid? classId)
     {
-        var studentsQuery = _context.Students.Include(s => s.Class).Where(s => s.IsActive);
+        var studentsQuery = _context.Students.IgnoreQueryFilters().Include(s => s.Class).Where(s => s.IsActive);
         if (classId.HasValue)
             studentsQuery = studentsQuery.Where(s => s.ClassId == classId.Value);
 

@@ -93,12 +93,30 @@ export interface StudentGeneralAverage {
   subjectAverages: StudentAverage[];
 }
 
+export interface SchoolSummary {
+  id: string;
+  name: string;
+}
+
 export interface UserProfile {
   id: string;
   email: string;
   firstName: string;
   lastName: string;
   role: 'Director' | 'Teacher' | 'Parent' | 'Student';
+  activeSchoolId: string | null;
+  activeSchoolName: string | null;
+  availableSchools: SchoolSummary[];
+}
+
+export interface School {
+  id: string;
+  name: string;
+  address: string | null;
+  currency: string;
+  defaultMaxScore: number;
+  directorId: string;
+  isActive: boolean;
 }
 
 export interface AcademicYear {
@@ -117,14 +135,6 @@ export interface AcademicTerm {
   endDate: string;
   academicYearId: string;
   academicYearName: string;
-}
-
-export interface EducationSettings {
-  id: string;
-  schoolName: string;
-  address: string | null;
-  currency: string;
-  defaultMaxScore: number;
 }
 
 export interface StudentCategory {

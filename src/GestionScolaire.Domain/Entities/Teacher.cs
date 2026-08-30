@@ -12,4 +12,5 @@ public class Teacher : BaseEntity
 
     public ICollection<SchoolClass> HomeroomClasses { get; set; } = new List<SchoolClass>();
     public ICollection<Grade> Grades { get; set; } = new List<Grade>();
+    public ICollection<TeacherSchool> Schools { get; set; } = new List<TeacherSchool>();
 }

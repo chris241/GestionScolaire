@@ -16,7 +16,8 @@ public interface IApplicationDbContext
     DbSet<Payment> Payments { get; }
     DbSet<AcademicYear> AcademicYears { get; }
     DbSet<AcademicTerm> AcademicTerms { get; }
-    DbSet<EducationSettings> EducationSettings { get; }
+    DbSet<School> Schools { get; }
+    DbSet<TeacherSchool> TeacherSchools { get; }
     DbSet<StudentCategory> StudentCategories { get; }
     DbSet<StudentBatch> StudentBatches { get; }
     DbSet<StudentGroup> StudentGroups { get; }

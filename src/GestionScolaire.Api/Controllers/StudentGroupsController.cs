@@ -22,7 +22,7 @@ public class StudentGroupsController : ControllerBase
     [HttpGet]
     public async Task<ActionResult<List<StudentGroupDto>>> GetAll()
     {
-        var groups = await _context.StudentGroups
+        var groups = await _context.StudentGroups.IgnoreQueryFilters()
             .Include(g => g.AcademicYear)
             .Include(g => g.Class)
             .Include(g => g.Teacher).ThenInclude(t => t!.User)
@@ -61,14 +61,14 @@ public class StudentGroupsController : ControllerBase
         SchoolClass? schoolClass = null;
         if (request.ClassId.HasValue)
         {
-            schoolClass = await _context.Classes.FindAsync(request.ClassId.Value);
+            schoolClass = await _context.Classes.IgnoreQueryFilters().FirstOrDefaultAsync(c => c.Id == request.ClassId.Value);
             if (schoolClass is null) return NotFound(new { message = "Classe introuvable." });
         }
 
         Teacher? teacher = null;
         if (request.TeacherId.HasValue)
         {
-            teacher = await _context.Teachers.Include(t => t.User).FirstOrDefaultAsync(t => t.Id == request.TeacherId.Value);
+            teacher = await _context.Teachers.IgnoreQueryFilters().Include(t => t.User).FirstOrDefaultAsync(t => t.Id == request.TeacherId.Value);
             if (teacher is null) return NotFound(new { message = "Enseignant introuvable." });
         }
 
@@ -92,7 +92,7 @@ public class StudentGroupsController : ControllerBase
     [Authorize(Roles = "Director")]
     public async Task<ActionResult<StudentGroupDto>> Update(Guid id, UpdateStudentGroupRequest request)
     {
-        var group = await _context.StudentGroups
+        var group = await _context.StudentGroups.IgnoreQueryFilters()
             .Include(g => g.AcademicYear)
             .Include(g => g.Class)
             .Include(g => g.Members)
@@ -105,7 +105,7 @@ public class StudentGroupsController : ControllerBase
             schoolClass = null;
             if (request.ClassId.HasValue)
             {
-                schoolClass = await _context.Classes.FindAsync(request.ClassId.Value);
+                schoolClass = await _context.Classes.IgnoreQueryFilters().FirstOrDefaultAsync(c => c.Id == request.ClassId.Value);
                 if (schoolClass is null) return NotFound(new { message = "Classe introuvable." });
             }
         }
@@ -113,7 +113,7 @@ public class StudentGroupsController : ControllerBase
         Teacher? teacher = null;
         if (request.TeacherId.HasValue)
         {
-            teacher = await _context.Teachers.Include(t => t.User).FirstOrDefaultAsync(t => t.Id == request.TeacherId.Value);
+            teacher = await _context.Teachers.IgnoreQueryFilters().Include(t => t.User).FirstOrDefaultAsync(t => t.Id == request.TeacherId.Value);
             if (teacher is null) return NotFound(new { message = "Enseignant introuvable." });
         }
 

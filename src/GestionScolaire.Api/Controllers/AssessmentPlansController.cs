@@ -44,7 +44,7 @@ public class AssessmentPlansController : ControllerBase
         if (!await CanAccessClassAsync(request.ClassId)) return Forbid();
 
         var course = await _context.Courses.FindAsync(request.CourseId);
-        var schoolClass = await _context.Classes.FindAsync(request.ClassId);
+        var schoolClass = await _context.Classes.IgnoreQueryFilters().FirstOrDefaultAsync(c => c.Id == request.ClassId);
         var term = await _context.AcademicTerms.FindAsync(request.AcademicTermId);
         var group = await _context.AssessmentGroups.FindAsync(request.AssessmentGroupId);
 
@@ -134,11 +134,11 @@ public class AssessmentPlansController : ControllerBase
     {
         if (_currentUser.Role != nameof(UserRole.Teacher)) return true;
 
-        return await _context.Classes.AnyAsync(c =>
+        return await _context.Classes.IgnoreQueryFilters().AnyAsync(c =>
             c.Id == classId && c.HomeroomTeacher != null && c.HomeroomTeacher.UserId == _currentUser.UserId);
     }
 
-    private IQueryable<AssessmentPlan> BaseQuery() => _context.AssessmentPlans
+    private IQueryable<AssessmentPlan> BaseQuery() => _context.AssessmentPlans.IgnoreQueryFilters()
         .Include(p => p.Course)
         .Include(p => p.Class)
         .Include(p => p.AcademicTerm)
