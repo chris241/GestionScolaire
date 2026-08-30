@@ -345,6 +345,18 @@ export interface ProgramEnrollment {
   status: EnrollmentStatus;
 }
 
+export interface CourseEnrollment {
+  id: string;
+  studentId: string;
+  studentFullName: string;
+  courseId: string;
+  courseName: string;
+  academicYearId: string;
+  academicYearName: string;
+  enrollmentDate: string;
+  status: EnrollmentStatus;
+}
+
 export type AttendanceStatus = 'Present' | 'Absent' | 'Retard' | 'Excuse';
 
 export interface AttendanceRecord {

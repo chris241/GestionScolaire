@@ -37,6 +37,7 @@ public class AppDbContext : DbContext, IApplicationDbContext
     public DbSet<Topic> Topics => Set<Topic>();
     public DbSet<CourseSchedule> CourseSchedules => Set<CourseSchedule>();
     public DbSet<ProgramEnrollment> ProgramEnrollments => Set<ProgramEnrollment>();
+    public DbSet<CourseEnrollment> CourseEnrollments => Set<CourseEnrollment>();
     public DbSet<StudentLeaveApplication> StudentLeaveApplications => Set<StudentLeaveApplication>();
     public DbSet<GradingScale> GradingScales => Set<GradingScale>();
     public DbSet<GradingScaleInterval> GradingScaleIntervals => Set<GradingScaleInterval>();
