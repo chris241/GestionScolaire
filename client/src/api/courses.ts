@@ -23,9 +23,17 @@ export async function deleteCourse(id: string): Promise<void> {
 
 export async function addTopic(
   courseId: string,
-  request: { name: string; description: string | null; order: number }
+  request: { name: string; description: string | null; content: string | null; order: number }
 ): Promise<Topic> {
   const { data } = await apiClient.post<Topic>(`/courses/${courseId}/topics`, request);
+  return data;
+}
+
+export async function updateTopic(
+  topicId: string,
+  request: { name: string; description: string | null; content: string | null; order: number }
+): Promise<Topic> {
+  const { data } = await apiClient.put<Topic>(`/courses/topics/${topicId}`, request);
   return data;
 }
 

@@ -231,6 +231,7 @@ export interface Topic {
   id: string;
   name: string;
   description: string | null;
+  content: string | null;
   order: number;
 }
 
