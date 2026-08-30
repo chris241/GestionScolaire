@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
-import { fetchCourseSchedules, createCourseSchedule, deleteCourseSchedule } from '../api/courseSchedules';
+import { fetchCourseSchedules, createCourseSchedule, deleteCourseSchedule, autoPlanSchedule, commitAutoPlan } from '../api/courseSchedules';
 import { fetchStudents } from '../api/students';
 import { fetchCourses } from '../api/courses';
 import { fetchRooms } from '../api/rooms';
@@ -7,7 +7,7 @@ import { fetchTeachers } from '../api/teachers';
 import { fetchAcademicTerms } from '../api/academicTerms';
 import { fetchAcademicYears } from '../api/academicYears';
 import { useAuth } from '../lib/AuthContext';
-import type { CourseSchedule, Course, Room, Teacher, AcademicTerm } from '../types';
+import type { CourseSchedule, Course, Room, Teacher, AcademicTerm, ScheduleRequirement, AutoPlanScheduleResult, ProposedScheduleSlot } from '../types';
 
 const inputClass =
   'rounded-xl border border-border bg-bg px-3.5 py-2.5 text-sm text-slate outline-none focus:border-primary focus:ring-2 focus:ring-primary/20';
@@ -48,6 +48,15 @@ export function Schedule() {
     startTime: '08:00',
     endTime: '09:00',
   });
+
+  const [showWizard, setShowWizard] = useState(false);
+  const [requirements, setRequirements] = useState<ScheduleRequirement[]>([]);
+  const [wizardDays, setWizardDays] = useState<number[]>([1, 2, 3, 4, 5]);
+  const [wizardSettings, setWizardSettings] = useState({ dailyStartTime: '08:00', periodsPerDay: '6', periodDurationMinutes: '60' });
+  const [planning, setPlanning] = useState(false);
+  const [committing, setCommitting] = useState(false);
+  const [planResult, setPlanResult] = useState<AutoPlanScheduleResult | null>(null);
+  const [commitSummary, setCommitSummary] = useState<{ created: number; skipped: string[] } | null>(null);
 
   useEffect(() => {
     fetchStudents()
@@ -130,6 +139,82 @@ export function Schedule() {
     }
   }
 
+  function addRequirement() {
+    if (courses.length === 0 || teachers.length === 0) return;
+    setRequirements((prev) => [...prev, { courseId: courses[0].id, teacherId: teachers[0].id, sessionsPerWeek: 2 }]);
+  }
+
+  function updateRequirement(index: number, patch: Partial<ScheduleRequirement>) {
+    setRequirements((prev) => prev.map((r, i) => (i === index ? { ...r, ...patch } : r)));
+  }
+
+  function removeRequirement(index: number) {
+    setRequirements((prev) => prev.filter((_, i) => i !== index));
+  }
+
+  function toggleWizardDay(day: number) {
+    setWizardDays((prev) => (prev.includes(day) ? prev.filter((d) => d !== day) : [...prev, day].sort()));
+  }
+
+  async function handlePropose() {
+    if (!selectedClassId || !form.academicTermId || requirements.length === 0 || wizardDays.length === 0) return;
+
+    setPlanning(true);
+    setError(null);
+    setPlanResult(null);
+    setCommitSummary(null);
+    try {
+      const result = await autoPlanSchedule({
+        classId: selectedClassId,
+        academicTermId: form.academicTermId,
+        days: wizardDays,
+        dailyStartTime: wizardSettings.dailyStartTime,
+        periodsPerDay: Number(wizardSettings.periodsPerDay) || 1,
+        periodDurationMinutes: Number(wizardSettings.periodDurationMinutes) || 60,
+        requirements,
+      });
+      setPlanResult(result);
+    } catch {
+      setError('Impossible de générer une proposition de planning.');
+    } finally {
+      setPlanning(false);
+    }
+  }
+
+  function removeProposedSlot(index: number) {
+    if (!planResult) return;
+    setPlanResult({ ...planResult, proposed: planResult.proposed.filter((_, i) => i !== index) });
+  }
+
+  async function handleCommitPlan() {
+    if (!planResult || planResult.proposed.length === 0) return;
+
+    setCommitting(true);
+    setError(null);
+    try {
+      const result = await commitAutoPlan(planResult.proposed);
+      setCommitSummary({ created: result.created.length, skipped: result.skipped });
+      setSchedules((prev) => [...prev, ...result.created.filter((c) => c.classId === selectedClassId)]);
+      setPlanResult(null);
+      setRequirements([]);
+    } catch {
+      setError("Impossible d'enregistrer ce planning.");
+    } finally {
+      setCommitting(false);
+    }
+  }
+
+  const proposedByDay = useMemo(() => {
+    const map = new Map<number, ProposedScheduleSlot[]>();
+    for (const s of planResult?.proposed ?? []) {
+      const list = map.get(s.dayOfWeek) ?? [];
+      list.push(s);
+      map.set(s.dayOfWeek, list);
+    }
+    for (const list of map.values()) list.sort((a, b) => a.startTime.localeCompare(b.startTime));
+    return map;
+  }, [planResult]);
+
   return (
     <div className="mx-auto max-w-6xl px-6 py-8">
       <h1 className="text-2xl font-semibold text-slate">Emploi du temps</h1>
@@ -187,6 +272,177 @@ export function Schedule() {
           </div>
         ))}
       </div>
+
+      {isDirector && (
+        <div className="mt-6 rounded-2xl border border-border bg-surface p-6 shadow-sm">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-base font-semibold text-slate">Assistant de planification</h2>
+              <p className="mt-1 text-sm text-slate-soft">
+                Propose un planning complet pour la classe et le trimestre sélectionnés, à partir d'une liste de cours à placer.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowWizard((v) => !v)}
+              className="rounded-xl border border-primary px-4 py-2.5 text-sm font-medium text-primary transition-colors hover:bg-primary-soft"
+            >
+              {showWizard ? 'Fermer' : 'Ouvrir l’assistant'}
+            </button>
+          </div>
+
+          {showWizard && (
+            <div className="mt-4 flex flex-col gap-4 border-t border-border pt-4">
+              {!form.academicTermId && (
+                <p className="text-sm text-slate-soft">Sélectionnez d'abord un trimestre ci-dessous.</p>
+              )}
+
+              <div className="flex flex-wrap items-center gap-4">
+                <div className="flex flex-wrap items-center gap-2">
+                  {DAY_ORDER.filter((d) => d !== 0).map((day) => (
+                    <label key={day} className="flex items-center gap-1.5 text-sm text-slate-soft">
+                      <input type="checkbox" checked={wizardDays.includes(day)} onChange={() => toggleWizardDay(day)} />
+                      {DAY_LABELS[day]}
+                    </label>
+                  ))}
+                </div>
+                <div className="flex items-center gap-2">
+                  <label className="text-xs text-slate-soft">Début</label>
+                  <input
+                    type="time"
+                    value={wizardSettings.dailyStartTime}
+                    onChange={(e) => setWizardSettings({ ...wizardSettings, dailyStartTime: e.target.value })}
+                    className={`${inputClass} py-1.5`}
+                  />
+                  <label className="text-xs text-slate-soft">Périodes/jour</label>
+                  <input
+                    type="number" min="1" max="12"
+                    value={wizardSettings.periodsPerDay}
+                    onChange={(e) => setWizardSettings({ ...wizardSettings, periodsPerDay: e.target.value })}
+                    className={`${inputClass} w-16 py-1.5`}
+                  />
+                  <label className="text-xs text-slate-soft">Durée (min)</label>
+                  <input
+                    type="number" min="15" max="180" step="5"
+                    value={wizardSettings.periodDurationMinutes}
+                    onChange={(e) => setWizardSettings({ ...wizardSettings, periodDurationMinutes: e.target.value })}
+                    className={`${inputClass} w-20 py-1.5`}
+                  />
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-2">
+                <h3 className="text-sm font-semibold text-slate">Cours à placer</h3>
+                {requirements.length === 0 && <p className="text-sm text-slate-soft">Aucun cours ajouté.</p>}
+                {requirements.map((req, i) => (
+                  <div key={i} className="flex flex-wrap items-center gap-2">
+                    <select
+                      value={req.courseId}
+                      onChange={(e) => updateRequirement(i, { courseId: e.target.value })}
+                      className={`${inputClass} flex-1`}
+                    >
+                      {courses.map((c) => (
+                        <option key={c.id} value={c.id}>{c.name}</option>
+                      ))}
+                    </select>
+                    <select
+                      value={req.teacherId}
+                      onChange={(e) => updateRequirement(i, { teacherId: e.target.value })}
+                      className={`${inputClass} flex-1`}
+                    >
+                      {teachers.map((t) => (
+                        <option key={t.id} value={t.id}>{t.fullName}</option>
+                      ))}
+                    </select>
+                    <input
+                      type="number" min="1" max="10"
+                      value={req.sessionsPerWeek}
+                      onChange={(e) => updateRequirement(i, { sessionsPerWeek: Number(e.target.value) || 1 })}
+                      className={`${inputClass} w-20`}
+                      title="Séances par semaine"
+                    />
+                    <span className="text-xs text-slate-soft">séance(s)/sem.</span>
+                    <button type="button" onClick={() => removeRequirement(i)} className="text-xs font-medium text-danger hover:text-danger">
+                      Retirer
+                    </button>
+                  </div>
+                ))}
+                <button type="button" onClick={addRequirement} className="w-fit text-xs font-medium text-primary hover:text-primary-hover">
+                  + Ajouter un cours
+                </button>
+              </div>
+
+              <button
+                type="button"
+                onClick={handlePropose}
+                disabled={planning || requirements.length === 0 || !form.academicTermId}
+                className="w-fit rounded-xl bg-primary px-4 py-2.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-primary-hover disabled:opacity-60"
+              >
+                {planning ? 'Calcul...' : 'Proposer un planning'}
+              </button>
+
+              {commitSummary && (
+                <div className="rounded-xl border border-success/20 bg-success-soft px-4 py-3 text-sm text-success">
+                  {commitSummary.created} créneau(x) enregistré(s).
+                  {commitSummary.skipped.length > 0 && ` ${commitSummary.skipped.length} ignoré(s) : ${commitSummary.skipped.join(' ')}`}
+                </div>
+              )}
+
+              {planResult && (
+                <div className="rounded-xl border border-border bg-bg p-4">
+                  <p className={`text-sm font-medium ${planResult.fullyPlaced ? 'text-success' : 'text-warning'}`}>
+                    {planResult.proposed.length} séance(s) proposée(s)
+                    {planResult.fullyPlaced ? ', planning complet.' : `, ${planResult.unplaced.length} non placée(s).`}
+                  </p>
+                  {planResult.unplaced.length > 0 && (
+                    <ul className="mt-2 flex flex-col gap-1">
+                      {planResult.unplaced.map((msg, i) => (
+                        <li key={i} className="text-xs text-warning">{msg}</li>
+                      ))}
+                    </ul>
+                  )}
+
+                  <div className="mt-3 flex flex-col gap-2">
+                    {DAY_ORDER.filter((d) => proposedByDay.has(d)).map((day) => (
+                      <div key={day}>
+                        <p className="text-xs font-semibold uppercase tracking-wide text-slate-soft">{DAY_LABELS[day]}</p>
+                        {proposedByDay.get(day)!.map((slot) => {
+                          const globalIndex = planResult.proposed.indexOf(slot);
+                          return (
+                            <div key={globalIndex} className="mt-1 flex items-center justify-between rounded-lg border border-border bg-surface px-3 py-1.5">
+                              <span className="text-sm text-slate">
+                                {slot.startTime}–{slot.endTime} · {slot.courseName} · {slot.teacherName} · {slot.roomName}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => removeProposedSlot(globalIndex)}
+                                className="text-xs font-medium text-danger hover:text-danger"
+                              >
+                                Retirer
+                              </button>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    ))}
+                  </div>
+
+                  {planResult.proposed.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={handleCommitPlan}
+                      disabled={committing}
+                      className="mt-3 w-fit rounded-xl bg-primary px-4 py-2.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-primary-hover disabled:opacity-60"
+                    >
+                      {committing ? 'Enregistrement...' : `Confirmer et enregistrer (${planResult.proposed.length})`}
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
 
       {isDirector && (
         <div className="mt-6 rounded-2xl border border-border bg-surface p-6 shadow-sm">
