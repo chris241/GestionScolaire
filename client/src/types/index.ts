@@ -300,6 +300,37 @@ export interface CourseSchedule {
   endTime: string;
 }
 
+export interface ScheduleRequirement {
+  courseId: string;
+  teacherId: string;
+  sessionsPerWeek: number;
+}
+
+export interface ProposedScheduleSlot {
+  courseId: string;
+  courseName: string;
+  teacherId: string;
+  teacherName: string;
+  roomId: string;
+  roomName: string;
+  classId: string;
+  academicTermId: string;
+  dayOfWeek: number;
+  startTime: string;
+  endTime: string;
+}
+
+export interface AutoPlanScheduleResult {
+  fullyPlaced: boolean;
+  proposed: ProposedScheduleSlot[];
+  unplaced: string[];
+}
+
+export interface CommitAutoPlanResult {
+  created: CourseSchedule[];
+  skipped: string[];
+}
+
 export type EnrollmentStatus = 'Active' | 'Completed' | 'Withdrawn';
 
 export interface ProgramEnrollment {
