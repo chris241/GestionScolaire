@@ -596,28 +596,35 @@ function StudentFeesPanel({ student, isDirector }: { student: Student; isDirecto
         {groups.length === 0 && (
           <p className="text-sm text-slate-soft">Aucune facture générée pour cet élève pour l'instant.</p>
         )}
-        {groups.map((group) => (
-          <div key={group.feeScheduleId} className="rounded-xl border border-border">
-            <div className="border-b border-border bg-bg px-4 py-2">
-              <p className="text-sm font-medium text-slate">
-                {group.structureName} · {group.termName} · échéance {formatDate(group.dueDate)}
-              </p>
+        {groups.map((group) => {
+          const allPaid = group.lines.every((l) => l.status === 'Paye');
+          const isOverdue = new Date(group.dueDate) < new Date();
+          const monthStatus = allPaid ? 'Paye' : isOverdue ? 'EnRetard' : 'EnAttente';
+
+          return (
+            <div key={group.feeScheduleId} className="rounded-xl border border-border">
+              <div className="flex items-center justify-between border-b border-border bg-bg px-4 py-2">
+                <p className="text-sm font-medium text-slate">
+                  {group.structureName} · {group.termName} · échéance {formatDate(group.dueDate)}
+                </p>
+                <StatusBadge status={monthStatus} />
+              </div>
+              <table className="w-full text-left text-sm">
+                <tbody>
+                  {group.lines.map((line) => (
+                    <tr key={line.id} className="border-t border-border first:border-t-0">
+                      <td className="px-4 py-2.5 text-slate">{line.feeCategoryName}</td>
+                      <td className="px-4 py-2.5 text-slate-soft">{formatAmount(line.totalAmount)}</td>
+                      <td className="px-4 py-2.5">
+                        <StatusBadge status={line.status} />
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
-            <table className="w-full text-left text-sm">
-              <tbody>
-                {group.lines.map((line) => (
-                  <tr key={line.id} className="border-t border-border first:border-t-0">
-                    <td className="px-4 py-2.5 text-slate">{line.feeCategoryName}</td>
-                    <td className="px-4 py-2.5 text-slate-soft">{formatAmount(line.totalAmount)}</td>
-                    <td className="px-4 py-2.5">
-                      <StatusBadge status={line.status} />
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
