@@ -1,6 +1,7 @@
 using System.Globalization;
 using GestionScolaire.Application.Common;
 using GestionScolaire.Application.Common.Interfaces;
+using GestionScolaire.Application.DTOs.AcademicYears;
 using GestionScolaire.Application.DTOs.Students;
 using GestionScolaire.Domain.Entities;
 using GestionScolaire.Domain.Enums;
@@ -132,6 +133,25 @@ public class StudentsController : ControllerBase
         await _context.SaveChangesAsync();
 
         return NoContent();
+    }
+
+    /// Année académique de la classe de cet élève (bornes de dates), pour construire un calendrier des
+    /// mois de l'année scolaire côté Parent — qui n'a pas de claim école et ne peut pas appeler
+    /// /api/academicyears directement.
+    [HttpGet("{studentId:guid}/academic-year")]
+    public async Task<ActionResult<AcademicYearDto>> GetAcademicYear(Guid studentId)
+    {
+        if (!await HasAccessAsync(studentId)) return Forbid();
+
+        var isParent = _currentUser.Role == nameof(UserRole.Parent);
+        var studentQuery = _context.Students.Include(s => s.Class).ThenInclude(c => c.AcademicYear).Where(s => s.Id == studentId);
+        if (isParent) studentQuery = studentQuery.IgnoreQueryFilters();
+
+        var student = await studentQuery.FirstOrDefaultAsync();
+        if (student is null) return NotFound();
+
+        var year = student.Class.AcademicYear;
+        return Ok(new AcademicYearDto(year.Id, year.Name, year.StartDate, year.EndDate, year.IsCurrent));
     }
 
     /// Liste toutes les catégories de frais de l'école active avec, pour chacune, si cet élève y est
