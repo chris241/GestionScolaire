@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text;
 using GestionScolaire.Api.Tests.Helpers;
+using GestionScolaire.Application.DTOs.AcademicYears;
 using GestionScolaire.Application.DTOs.Students;
 using Xunit;
 
@@ -202,5 +203,45 @@ public class StudentsEndpointsTests
         var response = await client.PostAsync("/api/students/import", content);
 
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Parent_CanFetchOwnChildAcademicYear()
+    {
+        // Un Parent n'a pas de claim école (voir AuthController) et ne peut pas appeler
+        // /api/academicyears directement : cet endpoint doit rester accessible via l'élève.
+        var parentClient = await _factory.CreateClient().AsUserAsync("parent1@ecole.mg");
+        var child = (await parentClient.GetFromJsonAsync<List<StudentDto>>("/api/students"))!.Single();
+
+        var response = await parentClient.GetAsync($"/api/students/{child.Id}/academic-year");
+
+        response.EnsureSuccessStatusCode();
+        var year = await response.Content.ReadFromJsonAsync<AcademicYearDto>();
+        Assert.Equal("2025-2026", year!.Name);
+    }
+
+    [Fact]
+    public async Task Parent_CannotFetchAnotherChildsAcademicYear()
+    {
+        var parent1Client = await _factory.CreateClient().AsUserAsync("parent1@ecole.mg");
+        var parent2Client = await _factory.CreateClient().AsUserAsync("parent2@ecole.mg");
+        var otherChild = (await parent2Client.GetFromJsonAsync<List<StudentDto>>("/api/students"))!.Single();
+
+        var response = await parent1Client.GetAsync($"/api/students/{otherChild.Id}/academic-year");
+
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Director_CanFetchAnyStudentsAcademicYear()
+    {
+        var client = await _factory.CreateClient().AsUserAsync("directeur@ecole.mg");
+        var student = (await client.GetFromJsonAsync<List<StudentDto>>("/api/students"))!.First();
+
+        var response = await client.GetAsync($"/api/students/{student.Id}/academic-year");
+
+        response.EnsureSuccessStatusCode();
+        var year = await response.Content.ReadFromJsonAsync<AcademicYearDto>();
+        Assert.True(year!.IsCurrent);
     }
 }

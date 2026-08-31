@@ -585,4 +585,20 @@ public class SchoolScopingIsolationTests
         var ownCategories = await client.GetFromJsonAsync<List<GestionScolaire.Application.DTOs.FeeCategories.FeeCategoryDto>>("/api/feecategories");
         Assert.Empty(ownCategories!);
     }
+
+    [Fact]
+    public async Task NewSchool_DirectorCannotSeeLumieresStudentAcademicYear_ByGuessingItsId()
+    {
+        // HasAccessAsync (IStudentAccessPolicy) laisse passer n'importe quel Directeur sans vérifier
+        // l'école : c'est le filtre Student (via Class) qui referme la frontière multi-tenant ici.
+        var lumiereDirector = await _factory.CreateClient().AsUserAsync("directeur@ecole.mg");
+        var lumiereStudents = await lumiereDirector.GetFromJsonAsync<List<StudentDto>>("/api/students");
+        var lumiereStudentId = lumiereStudents!.First().Id;
+
+        var client = await RegisterDirectorWithFreshSchoolAsync();
+
+        var response = await client.GetAsync($"/api/students/{lumiereStudentId}/academic-year");
+
+        Assert.Equal(System.Net.HttpStatusCode.NotFound, response.StatusCode);
+    }
 }

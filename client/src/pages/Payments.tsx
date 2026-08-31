@@ -9,9 +9,9 @@ import {
   validatePayment,
   rejectPayment,
 } from '../api/payments';
-import { fetchStudents } from '../api/students';
+import { fetchStudents, fetchStudentAcademicYear } from '../api/students';
 import { fetchStudentInvoices } from '../api/invoices';
-import type { Payment, Student, Invoice } from '../types';
+import type { Payment, Student, Invoice, AcademicYear } from '../types';
 import { StatusBadge } from '../components/StatusBadge';
 import { formatAmount } from '../lib/format';
 import { useAuth } from '../lib/AuthContext';
@@ -56,6 +56,35 @@ function groupInvoicesByMonth(invoices: Invoice[]): FeeMonthGroup[] {
       return { ...group, status: allPaid ? 'Paye' as const : isOverdue ? 'EnRetard' as const : 'EnAttente' as const };
     })
     .sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime());
+}
+
+interface CalendarMonth {
+  key: string;
+  monthDate: Date;
+  group: FeeMonthGroup | null;
+}
+
+// Le calendrier doit couvrir toute l'année scolaire (Class.AcademicYear.StartDate → EndDate), pas
+// seulement les mois pour lesquels une facture a déjà été générée (StartDate au 1er du mois pour que
+// la comparaison de mois marche même si l'année démarre en milieu de mois).
+function enumerateSchoolMonths(year: AcademicYear, invoices: Invoice[]): CalendarMonth[] {
+  const groupsByMonthKey = new Map<string, FeeMonthGroup>();
+  for (const group of groupInvoicesByMonth(invoices)) {
+    const d = new Date(group.dueDate);
+    groupsByMonthKey.set(`${d.getFullYear()}-${d.getMonth()}`, group);
+  }
+
+  const months: CalendarMonth[] = [];
+  const cursor = new Date(year.startDate);
+  cursor.setDate(1);
+  const last = new Date(year.endDate);
+  last.setDate(1);
+  while (cursor <= last) {
+    const key = `${cursor.getFullYear()}-${cursor.getMonth()}`;
+    months.push({ key, monthDate: new Date(cursor), group: groupsByMonthKey.get(key) ?? null });
+    cursor.setMonth(cursor.getMonth() + 1);
+  }
+  return months;
 }
 
 // Un Parent voit les paiements de tous ses enfants ; un Élève ne voit que les siens (un seul "enfant" : lui-même).
@@ -156,6 +185,17 @@ export function Payments() {
     fetchStudentInvoices(declareForm.studentId)
       .then(setChildInvoices)
       .catch(() => setChildInvoices([]));
+  }, [isParent, declareForm.studentId]);
+
+  const [childAcademicYear, setChildAcademicYear] = useState<AcademicYear | null>(null);
+  useEffect(() => {
+    if (!isParent || !declareForm.studentId) {
+      setChildAcademicYear(null);
+      return;
+    }
+    fetchStudentAcademicYear(declareForm.studentId)
+      .then(setChildAcademicYear)
+      .catch(() => setChildAcademicYear(null));
   }, [isParent, declareForm.studentId]);
 
   const declareInvoices = childInvoices.filter((i) => i.status !== 'Paye');
@@ -291,15 +331,29 @@ export function Payments() {
             ))}
           </select>
 
-          {declareForm.studentId && (
+          {declareForm.studentId && !childAcademicYear && (
+            <p className="mt-4 text-sm text-slate-soft">Chargement du calendrier...</p>
+          )}
+
+          {declareForm.studentId && childAcademicYear && (
             <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-              {groupInvoicesByMonth(childInvoices).length === 0 && (
-                <p className="col-span-full text-sm text-slate-soft">Aucune facture générée pour cet enfant pour l'instant.</p>
-              )}
-              {groupInvoicesByMonth(childInvoices).map((group) => {
+              {enumerateSchoolMonths(childAcademicYear, childInvoices).map(({ key, monthDate, group }) => {
+                if (!group) {
+                  return (
+                    <div key={key} className="rounded-xl border border-dashed border-border p-3">
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="text-sm font-medium capitalize text-slate">{formatMonthLabel(monthDate.toISOString())}</p>
+                        <span className="inline-flex items-center rounded-full bg-border px-3 py-1 text-xs font-medium text-slate-soft">
+                          Pas encore de facture
+                        </span>
+                      </div>
+                    </div>
+                  );
+                }
+
                 const unpaidLines = group.lines.filter((l) => l.status !== 'Paye');
                 return (
-                  <div key={group.feeScheduleId} className="rounded-xl border border-border p-3">
+                  <div key={key} className="rounded-xl border border-border p-3">
                     <div className="flex items-center justify-between gap-2">
                       <p className="text-sm font-medium capitalize text-slate">{formatMonthLabel(group.dueDate)}</p>
                       <StatusBadge status={group.status} />

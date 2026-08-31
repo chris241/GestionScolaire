@@ -1,5 +1,5 @@
 import { apiClient } from './client';
-import type { Sibling, Student, StudentFeeCategory, StudentImportResult } from '../types';
+import type { AcademicYear, Sibling, Student, StudentFeeCategory, StudentImportResult } from '../types';
 
 export async function fetchStudents(classId?: string): Promise<Student[]> {
   const { data } = await apiClient.get<Student[]>('/students', { params: { classId } });
@@ -17,6 +17,11 @@ export async function addSibling(studentId: string, siblingStudentId: string): P
 
 export async function removeSibling(studentId: string, siblingStudentId: string): Promise<void> {
   await apiClient.delete(`/students/${studentId}/siblings/${siblingStudentId}`);
+}
+
+export async function fetchStudentAcademicYear(studentId: string): Promise<AcademicYear> {
+  const { data } = await apiClient.get<AcademicYear>(`/students/${studentId}/academic-year`);
+  return data;
 }
 
 export async function fetchStudentFeeCategories(studentId: string): Promise<StudentFeeCategory[]> {
