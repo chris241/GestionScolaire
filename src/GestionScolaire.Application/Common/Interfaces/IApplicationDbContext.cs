@@ -48,6 +48,7 @@ public interface IApplicationDbContext
     DbSet<Guardian> Guardians { get; }
     DbSet<StudentGuardian> StudentGuardians { get; }
     DbSet<StudentSibling> StudentSiblings { get; }
+    DbSet<StudentFeeCategory> StudentFeeCategories { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

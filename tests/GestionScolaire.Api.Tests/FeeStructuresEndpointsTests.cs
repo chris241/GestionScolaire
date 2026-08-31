@@ -35,6 +35,9 @@ public class FeeStructuresEndpointsTests
     [Fact]
     public async Task Director_GenerateInvoices_OnSeededSchedule_IsIdempotent()
     {
+        // 8 élèves × 1 catégorie obligatoire (Scolarité) + Tojo Randria abonné en plus à Cantine et
+        // Transport (voir DbSeeder) = 10 factures potentielles pour cette échéance, dont 2 déjà seedées
+        // (Scolarité de Tojo et de Fara).
         var client = await _factory.CreateClient().AsUserAsync("directeur@ecole.mg");
 
         var structures = await client.GetFromJsonAsync<List<FeeStructureDto>>("/api/feestructures");
@@ -44,7 +47,7 @@ public class FeeStructuresEndpointsTests
         firstResponse.EnsureSuccessStatusCode();
         var firstResult = await firstResponse.Content.ReadFromJsonAsync<GenerateInvoicesResult>();
 
-        Assert.Equal(6, firstResult!.Created);
+        Assert.Equal(8, firstResult!.Created);
         Assert.Equal(2, firstResult.AlreadyExisted);
 
         var secondResponse = await client.PostAsync($"/api/feestructures/schedules/{scheduleId}/generate-invoices", null);
@@ -52,7 +55,7 @@ public class FeeStructuresEndpointsTests
         var secondResult = await secondResponse.Content.ReadFromJsonAsync<GenerateInvoicesResult>();
 
         Assert.Equal(0, secondResult!.Created);
-        Assert.Equal(8, secondResult.AlreadyExisted);
+        Assert.Equal(10, secondResult.AlreadyExisted);
     }
 
     [Fact]
@@ -104,8 +107,10 @@ public class FeeStructuresEndpointsTests
         createResponse.EnsureSuccessStatusCode();
         var created = await createResponse.Content.ReadFromJsonAsync<FeeStructureDto>();
 
+        // Catégorie obligatoire (Scolarité) : garantit que les 8 élèves actifs sont tous facturés, quel
+        // que soit leur abonnement aux catégories facultatives (Cantine/Transport).
         await client.PostAsJsonAsync($"/api/feestructures/{created!.Id}/items",
-            new CreateFeeStructureItemRequest(categories!.First().Id, 20000));
+            new CreateFeeStructureItemRequest(categories!.Single(c => c.IsMandatory).Id, 20000));
 
         var firstResponse = await client.PostAsJsonAsync($"/api/feestructures/{created.Id}/schedules/monthly",
             new GenerateMonthlySchedulesRequest(term.Id, 5));

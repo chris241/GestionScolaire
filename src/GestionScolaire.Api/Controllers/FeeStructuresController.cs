@@ -119,7 +119,7 @@ public class FeeStructuresController : ControllerBase
     public async Task<ActionResult<GenerateInvoicesResult>> GenerateInvoices(Guid scheduleId)
     {
         var schedule = await _context.FeeSchedules
-            .Include(s => s.FeeStructure).ThenInclude(f => f.Items)
+            .Include(s => s.FeeStructure).ThenInclude(f => f.Items).ThenInclude(i => i.FeeCategory)
             .Include(s => s.AcademicTerm)
             .FirstOrDefaultAsync(s => s.Id == scheduleId);
 
@@ -140,7 +140,7 @@ public class FeeStructuresController : ControllerBase
     public async Task<ActionResult<GenerateMonthlySchedulesResult>> GenerateMonthlySchedules(Guid id, GenerateMonthlySchedulesRequest request)
     {
         var structure = await _context.FeeStructures
-            .Include(s => s.Items)
+            .Include(s => s.Items).ThenInclude(i => i.FeeCategory)
             .FirstOrDefaultAsync(s => s.Id == id);
         var term = await _context.AcademicTerms.FindAsync(request.AcademicTermId);
         if (structure is null || term is null) return NotFound(new { message = "Structure ou trimestre introuvable." });
@@ -184,10 +184,12 @@ public class FeeStructuresController : ControllerBase
         return Ok(new GenerateMonthlySchedulesResult(schedulesCreated, existingMonths.Count, invoicesCreated));
     }
 
+    /// Génère une facture par élève et par catégorie de frais à laquelle il est assujetti (catégorie
+    /// obligatoire — FeeCategory.IsMandatory — ou abonnement explicite via StudentFeeCategory), et non
+    /// plus une seule facture combinée par élève : c'est ce qui permet de suivre séparément, par exemple,
+    /// que la Cantine d'un élève est payée alors que son Transport ne l'est pas.
     private async Task<(int Created, int AlreadyExisted)> GenerateInvoicesForScheduleAsync(FeeSchedule schedule)
     {
-        var totalAmount = schedule.FeeStructure.Items.Sum(i => i.Amount);
-
         var studentsQuery = _context.Students.Where(s => s.IsActive);
 
         if (schedule.FeeStructure.ProgramId.HasValue)
@@ -200,28 +202,54 @@ public class FeeStructuresController : ControllerBase
         }
 
         var students = await studentsQuery.ToListAsync();
+        var studentIds = students.Select(s => s.Id).ToList();
 
-        var existingStudentIds = await _context.Invoices
-            .Where(i => i.FeeScheduleId == schedule.Id)
-            .Select(i => i.StudentId)
+        var subscriptions = await _context.StudentFeeCategories
+            .Where(sfc => studentIds.Contains(sfc.StudentId))
+            .Select(sfc => new { sfc.StudentId, sfc.FeeCategoryId })
             .ToListAsync();
 
-        var toCreate = students.Where(s => !existingStudentIds.Contains(s.Id)).ToList();
+        var existing = await _context.Invoices
+            .Where(i => i.FeeScheduleId == schedule.Id)
+            .Select(i => new { i.StudentId, i.FeeStructureItemId })
+            .ToListAsync();
 
-        foreach (var student in toCreate)
+        var created = 0;
+        var alreadyExisted = 0;
+
+        foreach (var student in students)
         {
-            _context.Invoices.Add(new Invoice
+            foreach (var item in schedule.FeeStructure.Items)
             {
-                Student = student,
-                FeeSchedule = schedule,
-                SchoolId = _currentUser.SchoolId!.Value,
-                InvoiceNumber = $"FAC-{schedule.DueDate:yyyyMM}-{student.EnrollmentNumber}",
-                TotalAmount = totalAmount,
-                DueDate = schedule.DueDate
-            });
+                var isSubscribed = item.FeeCategory.IsMandatory
+                    || subscriptions.Any(s => s.StudentId == student.Id && s.FeeCategoryId == item.FeeCategoryId);
+                if (!isSubscribed) continue;
+
+                if (existing.Any(e => e.StudentId == student.Id && e.FeeStructureItemId == item.Id))
+                {
+                    alreadyExisted++;
+                    continue;
+                }
+
+                var categoryCode = item.FeeCategory.Name.Length >= 3
+                    ? item.FeeCategory.Name[..3].ToUpperInvariant()
+                    : item.FeeCategory.Name.ToUpperInvariant();
+
+                _context.Invoices.Add(new Invoice
+                {
+                    Student = student,
+                    FeeSchedule = schedule,
+                    FeeStructureItem = item,
+                    SchoolId = _currentUser.SchoolId!.Value,
+                    InvoiceNumber = $"FAC-{schedule.DueDate:yyyyMM}-{student.EnrollmentNumber}-{categoryCode}",
+                    TotalAmount = item.Amount,
+                    DueDate = schedule.DueDate
+                });
+                created++;
+            }
         }
 
-        return (toCreate.Count, existingStudentIds.Count);
+        return (created, alreadyExisted);
     }
 
     private IQueryable<FeeStructure> BaseQuery() => _context.FeeStructures

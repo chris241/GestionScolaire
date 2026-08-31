@@ -449,18 +449,27 @@ public static class DbSeeder
 
         var feeCategories = new[]
         {
-            new FeeCategory { Name = "Scolarité", Description = "Frais de scolarité de base", School = schoolLumiere },
+            new FeeCategory { Name = "Scolarité", Description = "Frais de scolarité de base", IsMandatory = true, School = schoolLumiere },
             new FeeCategory { Name = "Cantine", Description = "Restauration scolaire", School = schoolLumiere },
             new FeeCategory { Name = "Transport", Description = "Ramassage scolaire", School = schoolLumiere },
         };
         context.FeeCategories.AddRange(feeCategories);
 
+        // Cantine et Transport sont facultatifs : seul Tojo Randria (students[0]) y est abonné, pour
+        // démontrer qu'un élève non abonné n'est jamais facturé pour une catégorie facultative.
+        context.StudentFeeCategories.AddRange(
+            new StudentFeeCategory { Student = students[0], FeeCategory = feeCategories[1] },
+            new StudentFeeCategory { Student = students[0], FeeCategory = feeCategories[2] });
+
         var feeStructure = new FeeStructure { Name = "Frais standard 2025-2026", AcademicYear = academicYear };
         context.FeeStructures.Add(feeStructure);
-        context.FeeStructureItems.AddRange(
+        var feeStructureItems = new[]
+        {
             new FeeStructureItem { FeeStructure = feeStructure, FeeCategory = feeCategories[0], Amount = 200000 },
             new FeeStructureItem { FeeStructure = feeStructure, FeeCategory = feeCategories[1], Amount = 40000 },
-            new FeeStructureItem { FeeStructure = feeStructure, FeeCategory = feeCategories[2], Amount = 10000 });
+            new FeeStructureItem { FeeStructure = feeStructure, FeeCategory = feeCategories[2], Amount = 10000 },
+        };
+        context.FeeStructureItems.AddRange(feeStructureItems);
 
         var feeSchedule = new FeeSchedule
         {
@@ -470,13 +479,17 @@ public static class DbSeeder
         };
         context.FeeSchedules.Add(feeSchedule);
 
+        // Une facture par élève et par catégorie à laquelle il est assujetti (voir
+        // GenerateInvoicesForScheduleAsync) : Tojo (students[0]) a Scolarité + Cantine + Transport,
+        // Fara (students[1]) n'a que Scolarité (catégorie obligatoire, aucun abonnement facultatif).
         var paidInvoice = new Invoice
         {
             Student = students[0],
             FeeSchedule = feeSchedule,
+            FeeStructureItem = feeStructureItems[0],
             School = schoolLumiere,
-            InvoiceNumber = $"FAC-2025T1-{students[0].EnrollmentNumber[^3..]}",
-            TotalAmount = 250000,
+            InvoiceNumber = $"FAC-2025T1-{students[0].EnrollmentNumber[^3..]}-SCO",
+            TotalAmount = 200000,
             DueDate = feeSchedule.DueDate,
             Status = PaymentStatus.Paye
         };
@@ -484,9 +497,10 @@ public static class DbSeeder
         {
             Student = students[1],
             FeeSchedule = feeSchedule,
+            FeeStructureItem = feeStructureItems[0],
             School = schoolLumiere,
-            InvoiceNumber = $"FAC-2025T1-{students[1].EnrollmentNumber[^3..]}",
-            TotalAmount = 250000,
+            InvoiceNumber = $"FAC-2025T1-{students[1].EnrollmentNumber[^3..]}-SCO",
+            TotalAmount = 200000,
             DueDate = feeSchedule.DueDate,
             Status = PaymentStatus.EnAttente
         };
@@ -498,7 +512,7 @@ public static class DbSeeder
             Invoice = paidInvoice,
             School = schoolLumiere,
             Description = "Frais standard 2025-2026 — Trimestre 1",
-            Amount = 250000,
+            Amount = 200000,
             AcademicYear = "2025-2026",
             Term = term,
             DueDate = DateTime.UtcNow,

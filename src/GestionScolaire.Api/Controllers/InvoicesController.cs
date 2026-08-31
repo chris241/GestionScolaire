@@ -122,13 +122,14 @@ public class InvoicesController : ControllerBase
 
         var invoices = await _context.Invoices
             .Include(i => i.Student).ThenInclude(s => s.Class)
+            .Include(i => i.FeeStructureItem).ThenInclude(item => item.FeeCategory)
             .Where(i => i.Status != Domain.Enums.PaymentStatus.Paye && i.DueDate < today)
             .OrderBy(i => i.DueDate)
             .ToListAsync();
 
         var result = invoices.Select(i => new OverdueInvoiceDto(
             i.Id, i.StudentId, i.Student.FullName, i.Student.Class.Name, i.InvoiceNumber,
-            i.TotalAmount, i.DueDate, (today - i.DueDate.Date).Days));
+            i.FeeStructureItem.FeeCategory.Name, i.TotalAmount, i.DueDate, (today - i.DueDate.Date).Days));
 
         return Ok(result);
     }
@@ -136,9 +137,11 @@ public class InvoicesController : ControllerBase
     private IQueryable<Domain.Entities.Invoice> BaseQuery() => _context.Invoices
         .Include(i => i.Student)
         .Include(i => i.FeeSchedule).ThenInclude(s => s.AcademicTerm)
-        .Include(i => i.FeeSchedule).ThenInclude(s => s.FeeStructure);
+        .Include(i => i.FeeSchedule).ThenInclude(s => s.FeeStructure)
+        .Include(i => i.FeeStructureItem).ThenInclude(item => item.FeeCategory);
 
     private static InvoiceDto ToDto(Domain.Entities.Invoice i) => new(
         i.Id, i.StudentId, i.Student.FullName, i.InvoiceNumber, i.TotalAmount, i.DueDate, i.Status.ToString(),
-        i.FeeScheduleId, i.FeeSchedule.FeeStructure.Name, i.FeeSchedule.AcademicTerm.Name);
+        i.FeeScheduleId, i.FeeSchedule.FeeStructure.Name, i.FeeSchedule.AcademicTerm.Name,
+        i.FeeStructureItem.FeeCategoryId, i.FeeStructureItem.FeeCategory.Name);
 }

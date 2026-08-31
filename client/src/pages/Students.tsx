@@ -1,5 +1,14 @@
 import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from 'react';
-import { fetchStudents, fetchSiblings, addSibling, removeSibling, importStudents } from '../api/students';
+import {
+  fetchStudents,
+  fetchSiblings,
+  addSibling,
+  removeSibling,
+  importStudents,
+  fetchStudentFeeCategories,
+  subscribeToFeeCategory,
+  unsubscribeFromFeeCategory,
+} from '../api/students';
 import {
   fetchGuardians,
   createGuardian,
@@ -8,8 +17,11 @@ import {
   unlinkGuardianFromStudent,
   updateGuardianInterests,
 } from '../api/guardians';
-import type { Guardian, Sibling, Student, StudentGuardianLink, StudentImportResult } from '../types';
+import { fetchStudentInvoices } from '../api/invoices';
+import type { Guardian, Invoice, Sibling, Student, StudentFeeCategory, StudentGuardianLink, StudentImportResult } from '../types';
 import { useAuth } from '../lib/AuthContext';
+import { StatusBadge } from '../components/StatusBadge';
+import { formatAmount } from '../lib/format';
 
 const inputClass =
   'rounded-xl border border-border bg-bg px-3.5 py-2.5 text-sm text-slate outline-none focus:border-primary focus:ring-2 focus:ring-primary/20';
@@ -209,6 +221,10 @@ export function Students() {
           allStudents={students}
           isDirector={isDirector}
         />
+      )}
+
+      {selectedStudent && (isDirector || isParent) && (
+        <StudentFeesPanel key={`fees-${selectedStudent.id}`} student={selectedStudent} isDirector={isDirector} />
       )}
     </div>
   );
@@ -483,6 +499,125 @@ function StudentDetailPanel({
             </button>
           </form>
         )}
+      </div>
+    </div>
+  );
+}
+
+interface FeeMonthGroup {
+  feeScheduleId: string;
+  dueDate: string;
+  structureName: string;
+  termName: string;
+  lines: Invoice[];
+}
+
+function StudentFeesPanel({ student, isDirector }: { student: Student; isDirector: boolean }) {
+  const [invoices, setInvoices] = useState<Invoice[]>([]);
+  const [categories, setCategories] = useState<StudentFeeCategory[]>([]);
+  const [error, setError] = useState<string | null>(null);
+  const [togglingId, setTogglingId] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetchStudentInvoices(student.id)
+      .then(setInvoices)
+      .catch(() => setError('Impossible de charger les factures de cet élève.'));
+
+    if (isDirector) {
+      fetchStudentFeeCategories(student.id)
+        .then(setCategories)
+        .catch(() => setError('Impossible de charger les catégories de frais.'));
+    }
+  }, [student.id, isDirector]);
+
+  async function handleToggleCategory(categoryId: string, isSubscribed: boolean) {
+    setTogglingId(categoryId);
+    setError(null);
+    try {
+      if (isSubscribed) {
+        await unsubscribeFromFeeCategory(student.id, categoryId);
+      } else {
+        await subscribeToFeeCategory(student.id, categoryId);
+      }
+      setCategories(await fetchStudentFeeCategories(student.id));
+    } catch {
+      setError("Impossible de modifier l'abonnement à cette catégorie.");
+    } finally {
+      setTogglingId(null);
+    }
+  }
+
+  const optionalCategories = categories.filter((c) => !c.isMandatory);
+
+  const groups = Object.values(
+    invoices.reduce<Record<string, FeeMonthGroup>>((acc, invoice) => {
+      const group = (acc[invoice.feeScheduleId] ??= {
+        feeScheduleId: invoice.feeScheduleId,
+        dueDate: invoice.dueDate,
+        structureName: invoice.feeStructureName,
+        termName: invoice.academicTermName,
+        lines: [],
+      });
+      group.lines.push(invoice);
+      return acc;
+    }, {})
+  ).sort((a, b) => new Date(b.dueDate).getTime() - new Date(a.dueDate).getTime());
+
+  return (
+    <div className="mt-6 rounded-2xl border border-border bg-surface p-6 shadow-sm">
+      <h2 className="text-base font-semibold text-slate">
+        Frais &amp; paiements — {student.firstName} {student.lastName}
+      </h2>
+
+      {error && (
+        <div className="mt-3 rounded-xl border border-danger/20 bg-danger-soft px-4 py-3 text-sm text-danger">
+          {error}
+        </div>
+      )}
+
+      {isDirector && optionalCategories.length > 0 && (
+        <div className="mt-4 flex flex-wrap items-center gap-4 border-b border-border pb-4">
+          <span className="text-xs font-medium text-slate-soft">Catégories facultatives :</span>
+          {optionalCategories.map((c) => (
+            <label key={c.feeCategoryId} className="flex items-center gap-2 text-sm text-slate">
+              <input
+                type="checkbox"
+                checked={c.isSubscribed}
+                disabled={togglingId === c.feeCategoryId}
+                onChange={() => handleToggleCategory(c.feeCategoryId, c.isSubscribed)}
+              />
+              {c.feeCategoryName}
+            </label>
+          ))}
+        </div>
+      )}
+
+      <div className="mt-4 flex flex-col gap-4">
+        {groups.length === 0 && (
+          <p className="text-sm text-slate-soft">Aucune facture générée pour cet élève pour l'instant.</p>
+        )}
+        {groups.map((group) => (
+          <div key={group.feeScheduleId} className="rounded-xl border border-border">
+            <div className="border-b border-border bg-bg px-4 py-2">
+              <p className="text-sm font-medium text-slate">
+                {group.structureName} · {group.termName} · échéance {formatDate(group.dueDate)}
+              </p>
+            </div>
+            <table className="w-full text-left text-sm">
+              <tbody>
+                {group.lines.map((line) => (
+                  <tr key={line.id} className="border-t border-border first:border-t-0">
+                    <td className="px-4 py-2.5 text-slate">{line.feeCategoryName}</td>
+                    <td className="px-4 py-2.5 text-slate-soft">{formatAmount(line.totalAmount)}</td>
+                    <td className="px-4 py-2.5">
+                      <StatusBadge status={line.status} />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ))}
       </div>
     </div>
   );

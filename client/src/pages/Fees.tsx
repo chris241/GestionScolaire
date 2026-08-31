@@ -45,7 +45,7 @@ export function Fees() {
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
 
-  const [categoryForm, setCategoryForm] = useState({ name: '', description: '' });
+  const [categoryForm, setCategoryForm] = useState({ name: '', description: '', isMandatory: false });
   const [structureForm, setStructureForm] = useState({ name: '', programId: '' });
   const [itemForm, setItemForm] = useState({ structureId: '', feeCategoryId: '', amount: '' });
   const [scheduleForm, setScheduleForm] = useState({ structureId: '', academicTermId: '', dueDate: '' });
@@ -87,9 +87,13 @@ export function Fees() {
     setSavingCategory(true);
     setError(null);
     try {
-      const created = await createFeeCategory({ name: categoryForm.name, description: categoryForm.description || null });
+      const created = await createFeeCategory({
+        name: categoryForm.name,
+        description: categoryForm.description || null,
+        isMandatory: categoryForm.isMandatory,
+      });
       setCategories((prev) => [...prev, created]);
-      setCategoryForm({ name: '', description: '' });
+      setCategoryForm({ name: '', description: '', isMandatory: false });
     } catch {
       setError('Impossible de créer la catégorie de frais.');
     } finally {
@@ -228,7 +232,14 @@ export function Fees() {
             {categories.map((c) => (
               <div key={c.id} className="flex items-center justify-between rounded-xl border border-border px-3.5 py-2.5">
                 <div>
-                  <p className="text-sm font-medium text-slate">{c.name}</p>
+                  <p className="text-sm font-medium text-slate">
+                    {c.name}
+                    {c.isMandatory ? (
+                      <span className="ml-2 rounded-full bg-primary-soft px-2 py-0.5 text-xs font-medium text-primary">Obligatoire</span>
+                    ) : (
+                      <span className="ml-2 rounded-full bg-border px-2 py-0.5 text-xs font-medium text-slate-soft">Facultatif</span>
+                    )}
+                  </p>
                   {c.description && <p className="text-xs text-slate-soft">{c.description}</p>}
                 </div>
                 <button type="button" onClick={() => handleDeleteCategory(c.id)} className="text-xs font-medium text-danger hover:text-danger">
@@ -241,6 +252,14 @@ export function Fees() {
             <h3 className="text-sm font-semibold text-slate">Créer une catégorie</h3>
             <input required placeholder="Nom (ex: Cantine)" value={categoryForm.name} onChange={(e) => setCategoryForm({ ...categoryForm, name: e.target.value })} className={inputClass} />
             <input placeholder="Description" value={categoryForm.description} onChange={(e) => setCategoryForm({ ...categoryForm, description: e.target.value })} className={inputClass} />
+            <label className="flex items-center gap-2 text-sm text-slate-soft">
+              <input
+                type="checkbox"
+                checked={categoryForm.isMandatory}
+                onChange={(e) => setCategoryForm({ ...categoryForm, isMandatory: e.target.checked })}
+              />
+              Obligatoire pour tous les élèves (sinon facultatif, par abonnement)
+            </label>
             <button type="submit" disabled={savingCategory} className="mt-1 w-fit rounded-xl bg-primary px-4 py-2.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-primary-hover disabled:opacity-60">
               {savingCategory ? 'Création...' : 'Créer'}
             </button>
@@ -374,6 +393,7 @@ export function Fees() {
             <tr className="text-xs uppercase tracking-wide text-slate-soft">
               <th className="px-6 py-3 font-medium">Facture</th>
               <th className="px-6 py-3 font-medium">Élève</th>
+              <th className="px-6 py-3 font-medium">Catégorie</th>
               <th className="px-6 py-3 font-medium">Structure</th>
               <th className="px-6 py-3 font-medium">Montant</th>
               <th className="px-6 py-3 font-medium">Échéance</th>
@@ -382,12 +402,13 @@ export function Fees() {
           </thead>
           <tbody>
             {invoices.length === 0 && (
-              <tr><td colSpan={6} className="px-6 py-8 text-center text-slate-soft">Aucune facture générée.</td></tr>
+              <tr><td colSpan={7} className="px-6 py-8 text-center text-slate-soft">Aucune facture générée.</td></tr>
             )}
             {invoices.map((invoice) => (
               <tr key={invoice.id} className="border-t border-border">
                 <td className="px-6 py-4 text-slate-soft">{invoice.invoiceNumber}</td>
                 <td className="px-6 py-4 font-medium text-slate">{invoice.studentFullName}</td>
+                <td className="px-6 py-4 text-slate-soft">{invoice.feeCategoryName}</td>
                 <td className="px-6 py-4 text-slate-soft">{invoice.feeStructureName} · {invoice.academicTermName}</td>
                 <td className="px-6 py-4 text-slate">{formatAmount(invoice.totalAmount)}</td>
                 <td className="px-6 py-4 text-slate-soft">{formatDate(invoice.dueDate)}</td>
@@ -465,6 +486,7 @@ function FeeCollectionReports() {
               <tr className="text-xs uppercase tracking-wide text-slate-soft">
                 <th className="px-4 py-2 font-medium">Élève</th>
                 <th className="px-4 py-2 font-medium">Classe</th>
+                <th className="px-4 py-2 font-medium">Catégorie</th>
                 <th className="px-4 py-2 font-medium">Facture</th>
                 <th className="px-4 py-2 font-medium">Montant</th>
                 <th className="px-4 py-2 font-medium">Échéance</th>
@@ -473,12 +495,13 @@ function FeeCollectionReports() {
             </thead>
             <tbody>
               {overdueInvoices.length === 0 && (
-                <tr><td colSpan={6} className="px-4 py-6 text-center text-slate-soft">Aucun retard.</td></tr>
+                <tr><td colSpan={7} className="px-4 py-6 text-center text-slate-soft">Aucun retard.</td></tr>
               )}
               {overdueInvoices.map((i) => (
                 <tr key={i.id} className="border-t border-border">
                   <td className="px-4 py-2 font-medium text-slate">{i.studentFullName}</td>
                   <td className="px-4 py-2 text-slate-soft">{i.className}</td>
+                  <td className="px-4 py-2 text-slate-soft">{i.feeCategoryName}</td>
                   <td className="px-4 py-2 text-slate-soft">{i.invoiceNumber}</td>
                   <td className="px-4 py-2 text-slate-soft">{formatAmount(i.totalAmount)}</td>
                   <td className="px-4 py-2 text-slate-soft">{formatDate(i.dueDate)}</td>

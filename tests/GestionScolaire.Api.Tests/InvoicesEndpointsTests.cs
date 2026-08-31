@@ -66,8 +66,8 @@ public class InvoicesEndpointsTests
         var allInvoices = await client.GetFromJsonAsync<List<InvoiceDto>>("/api/invoices");
         // Numéros de facture déterministes plutôt que Single(Status==...) : d'autres tests peuvent créer
         // des factures supplémentaires payées/en attente dans la même base partagée.
-        var pendingInvoice = allInvoices!.Single(i => i.InvoiceNumber == "FAC-2025T1-002");
-        var paidInvoice = allInvoices!.Single(i => i.InvoiceNumber == "FAC-2025T1-001");
+        var pendingInvoice = allInvoices!.Single(i => i.InvoiceNumber == "FAC-2025T1-002-SCO");
+        var paidInvoice = allInvoices!.Single(i => i.InvoiceNumber == "FAC-2025T1-001-SCO");
 
         var overdue = await client.GetFromJsonAsync<List<OverdueInvoiceDto>>("/api/invoices/reports/overdue");
 

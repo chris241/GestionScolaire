@@ -503,6 +503,14 @@ export interface FeeCategory {
   id: string;
   name: string;
   description: string | null;
+  isMandatory: boolean;
+}
+
+export interface StudentFeeCategory {
+  feeCategoryId: string;
+  feeCategoryName: string;
+  isMandatory: boolean;
+  isSubscribed: boolean;
 }
 
 export interface FeeStructureItem {
@@ -543,6 +551,8 @@ export interface Invoice {
   feeScheduleId: string;
   feeStructureName: string;
   academicTermName: string;
+  feeCategoryId: string;
+  feeCategoryName: string;
 }
 
 export interface StudentFeeCollection {
@@ -560,6 +570,7 @@ export interface OverdueInvoice {
   studentFullName: string;
   className: string;
   invoiceNumber: string;
+  feeCategoryName: string;
   totalAmount: number;
   dueDate: string;
   daysLate: number;

@@ -6,8 +6,21 @@ export async function fetchFeeCategories(): Promise<FeeCategory[]> {
   return data;
 }
 
-export async function createFeeCategory(request: { name: string; description: string | null }): Promise<FeeCategory> {
+export async function createFeeCategory(request: {
+  name: string;
+  description: string | null;
+  isMandatory: boolean;
+}): Promise<FeeCategory> {
   const { data } = await apiClient.post<FeeCategory>('/feecategories', request);
+  return data;
+}
+
+export async function updateFeeCategory(id: string, request: {
+  name: string;
+  description: string | null;
+  isMandatory: boolean;
+}): Promise<FeeCategory> {
+  const { data } = await apiClient.put<FeeCategory>(`/feecategories/${id}`, request);
   return data;
 }
 

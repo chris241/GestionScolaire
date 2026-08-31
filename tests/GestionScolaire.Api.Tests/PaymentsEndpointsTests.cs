@@ -155,8 +155,10 @@ public class PaymentsEndpointsTests
         var structureResponse = await directorClient.PostAsJsonAsync("/api/feestructures", new CreateFeeStructureRequest(
             "Frais Validation Test", currentYear.Id, null));
         var structure = await structureResponse.Content.ReadFromJsonAsync<FeeStructureDto>();
+        // Catégorie obligatoire (Scolarité) : garantit que l'élève de parent5 est bien facturé, quel que
+        // soit son abonnement aux catégories facultatives (Cantine/Transport).
         await directorClient.PostAsJsonAsync($"/api/feestructures/{structure!.Id}/items",
-            new CreateFeeStructureItemRequest(categories!.First().Id, 40000));
+            new CreateFeeStructureItemRequest(categories!.Single(c => c.IsMandatory).Id, 40000));
         var scheduleResponse = await directorClient.PostAsJsonAsync($"/api/feestructures/{structure.Id}/schedules",
             new CreateFeeScheduleRequest(terms!.First().Id, DateTime.UtcNow.AddDays(10)));
         var schedule = await scheduleResponse.Content.ReadFromJsonAsync<FeeScheduleDto>();

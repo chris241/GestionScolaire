@@ -134,6 +134,62 @@ public class StudentsController : ControllerBase
         return NoContent();
     }
 
+    /// Liste toutes les catégories de frais de l'école active avec, pour chacune, si cet élève y est
+    /// assujetti (obligatoire pour tous, ou abonnement explicite pour une catégorie optionnelle comme
+    /// Cantine/Transport).
+    [HttpGet("{studentId:guid}/fee-categories")]
+    [Authorize(Roles = "Director")]
+    public async Task<ActionResult<List<StudentFeeCategoryDto>>> GetFeeCategories(Guid studentId)
+    {
+        if (await _context.Students.FindAsync(studentId) is null) return NotFound();
+
+        var categories = await _context.FeeCategories.OrderBy(c => c.Name).ToListAsync();
+        var subscribedIds = await _context.StudentFeeCategories
+            .Where(sfc => sfc.StudentId == studentId)
+            .Select(sfc => sfc.FeeCategoryId)
+            .ToListAsync();
+
+        var result = categories.Select(c => new StudentFeeCategoryDto(
+            c.Id, c.Name, c.IsMandatory, c.IsMandatory || subscribedIds.Contains(c.Id)));
+
+        return Ok(result);
+    }
+
+    [HttpPost("{studentId:guid}/fee-categories/{categoryId:guid}")]
+    [Authorize(Roles = "Director")]
+    public async Task<IActionResult> SubscribeToFeeCategory(Guid studentId, Guid categoryId)
+    {
+        var student = await _context.Students.FindAsync(studentId);
+        var category = await _context.FeeCategories.FindAsync(categoryId);
+        if (student is null || category is null) return NotFound(new { message = "Élève ou catégorie de frais introuvable." });
+
+        if (category.IsMandatory)
+            return BadRequest(new { message = "Cette catégorie est obligatoire : tous les élèves y sont déjà assujettis." });
+
+        var alreadySubscribed = await _context.StudentFeeCategories
+            .AnyAsync(sfc => sfc.StudentId == studentId && sfc.FeeCategoryId == categoryId);
+        if (alreadySubscribed) return Conflict(new { message = "Cet élève est déjà abonné à cette catégorie." });
+
+        _context.StudentFeeCategories.Add(new StudentFeeCategory { StudentId = studentId, FeeCategoryId = categoryId });
+        await _context.SaveChangesAsync();
+
+        return NoContent();
+    }
+
+    [HttpDelete("{studentId:guid}/fee-categories/{categoryId:guid}")]
+    [Authorize(Roles = "Director")]
+    public async Task<IActionResult> UnsubscribeFromFeeCategory(Guid studentId, Guid categoryId)
+    {
+        var link = await _context.StudentFeeCategories
+            .FirstOrDefaultAsync(sfc => sfc.StudentId == studentId && sfc.FeeCategoryId == categoryId);
+        if (link is null) return NotFound();
+
+        _context.StudentFeeCategories.Remove(link);
+        await _context.SaveChangesAsync();
+
+        return NoContent();
+    }
+
     /// Outil de création en masse : un fichier CSV (en-tête ignoré) avec les colonnes
     /// FirstName,LastName,DateOfBirth(AAAA-MM-JJ),Gender(Masculin/Feminin),ClassName,EnrollmentNumber(optionnel).
     /// Chaque ligne est validée indépendamment ; les lignes valides sont importées même si d'autres échouent.
