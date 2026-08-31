@@ -34,7 +34,7 @@ public class FeeCategoriesEndpointsTests
     {
         var client = await _factory.CreateClient().AsUserAsync("directeur@ecole.mg");
 
-        var createResponse = await client.PostAsJsonAsync("/api/feecategories", new CreateFeeCategoryRequest("Fournitures", null));
+        var createResponse = await client.PostAsJsonAsync("/api/feecategories", new CreateFeeCategoryRequest("Fournitures", null, false));
         createResponse.EnsureSuccessStatusCode();
         var created = await createResponse.Content.ReadFromJsonAsync<FeeCategoryDto>();
 

@@ -56,6 +56,7 @@ public class AppDbContext : DbContext, IApplicationDbContext
     public DbSet<Guardian> Guardians => Set<Guardian>();
     public DbSet<StudentGuardian> StudentGuardians => Set<StudentGuardian>();
     public DbSet<StudentSibling> StudentSiblings => Set<StudentSibling>();
+    public DbSet<StudentFeeCategory> StudentFeeCategories => Set<StudentFeeCategory>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -93,6 +94,7 @@ public class AppDbContext : DbContext, IApplicationDbContext
         modelBuilder.Entity<StudentGuardian>().HasQueryFilter(sg => sg.Guardian.SchoolId == _currentUser.SchoolId);
         modelBuilder.Entity<StudentLog>().HasQueryFilter(l => l.SchoolId == _currentUser.SchoolId);
         modelBuilder.Entity<TeacherLog>().HasQueryFilter(l => l.SchoolId == _currentUser.SchoolId);
+        modelBuilder.Entity<StudentFeeCategory>().HasQueryFilter(sfc => sfc.FeeCategory.SchoolId == _currentUser.SchoolId);
 
         base.OnModelCreating(modelBuilder);
     }

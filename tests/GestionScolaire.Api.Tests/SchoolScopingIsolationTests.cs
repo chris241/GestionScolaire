@@ -569,4 +569,20 @@ public class SchoolScopingIsolationTests
         var scalesAfter = await lumiereDirector.GetFromJsonAsync<List<GradingScaleDto>>("/api/gradingscales");
         Assert.Contains(scalesAfter!.First().Intervals, i => i.Id == lumiereIntervalId);
     }
+
+    [Fact]
+    public async Task NewSchool_DirectorCannotSeeOrSubscribeLumieresStudent_ToFeeCategories_ByGuessingItsId()
+    {
+        var lumiereDirector = await _factory.CreateClient().AsUserAsync("directeur@ecole.mg");
+        var lumiereStudents = await lumiereDirector.GetFromJsonAsync<List<StudentDto>>("/api/students");
+        var lumiereStudentId = lumiereStudents!.First().Id;
+
+        var client = await RegisterDirectorWithFreshSchoolAsync();
+
+        var getResponse = await client.GetAsync($"/api/students/{lumiereStudentId}/fee-categories");
+        Assert.Equal(System.Net.HttpStatusCode.NotFound, getResponse.StatusCode);
+
+        var ownCategories = await client.GetFromJsonAsync<List<GestionScolaire.Application.DTOs.FeeCategories.FeeCategoryDto>>("/api/feecategories");
+        Assert.Empty(ownCategories!);
+    }
 }

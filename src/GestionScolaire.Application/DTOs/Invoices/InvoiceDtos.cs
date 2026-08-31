@@ -10,7 +10,9 @@ public record InvoiceDto(
     string Status,
     Guid FeeScheduleId,
     string FeeStructureName,
-    string AcademicTermName
+    string AcademicTermName,
+    Guid FeeCategoryId,
+    string FeeCategoryName
 );
 
 public record StudentFeeCollectionDto(
@@ -38,6 +40,7 @@ public record OverdueInvoiceDto(
     string StudentFullName,
     string ClassName,
     string InvoiceNumber,
+    string FeeCategoryName,
     decimal TotalAmount,
     DateTime DueDate,
     int DaysLate

@@ -25,11 +25,18 @@ public class InvoiceConfiguration : IEntityTypeConfiguration<Invoice>
             .HasForeignKey(i => i.FeeScheduleId)
             .OnDelete(DeleteBehavior.Restrict);
 
+        builder.HasOne(i => i.FeeStructureItem)
+            .WithMany()
+            .HasForeignKey(i => i.FeeStructureItemId)
+            .OnDelete(DeleteBehavior.Restrict);
+
         builder.HasOne(i => i.School)
             .WithMany()
             .HasForeignKey(i => i.SchoolId)
             .OnDelete(DeleteBehavior.Restrict);
 
-        builder.HasIndex(i => new { i.StudentId, i.FeeScheduleId }).IsUnique();
+        // Un élève a au plus une facture par catégorie et par échéance (un combiné n'existe plus : une
+        // facture = un élève + une échéance + une catégorie).
+        builder.HasIndex(i => new { i.StudentId, i.FeeScheduleId, i.FeeStructureItemId }).IsUnique();
     }
 }

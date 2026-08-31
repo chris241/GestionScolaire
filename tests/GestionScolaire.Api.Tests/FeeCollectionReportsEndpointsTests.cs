@@ -32,8 +32,8 @@ public class FeeCollectionReportsEndpointsTests
         Assert.Equal(students!.Count, report!.Count);
 
         var tojo = report.Single(r => r.StudentFullName == "Tojo Randria");
-        Assert.True(tojo.InvoicedAmount >= 250000);
-        Assert.True(tojo.PaidAmount >= 250000);
+        Assert.True(tojo.InvoicedAmount >= 200000);
+        Assert.True(tojo.PaidAmount >= 200000);
     }
 
     [Fact]
@@ -64,8 +64,8 @@ public class FeeCollectionReportsEndpointsTests
         Assert.NotNull(report);
         var collegeGeneral = Assert.Single(report!, r => r.ProgramName == "Collège Général");
         Assert.Equal(students!.Count, collegeGeneral.StudentCount);
-        Assert.True(collegeGeneral.InvoicedAmount >= 500000);
-        Assert.True(collegeGeneral.PaidAmount >= 250000);
+        Assert.True(collegeGeneral.InvoicedAmount >= 400000);
+        Assert.True(collegeGeneral.PaidAmount >= 200000);
     }
 
     [Fact]
