@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { Navigate } from 'react-router-dom';
 import {
   fetchPayments,
@@ -22,6 +22,40 @@ const inputClass =
 function formatDate(date: string | null) {
   if (!date) return '—';
   return new Date(date).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' });
+}
+
+function formatMonthLabel(date: string) {
+  return new Date(date).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
+}
+
+interface FeeMonthGroup {
+  feeScheduleId: string;
+  dueDate: string;
+  termName: string;
+  lines: Invoice[];
+  status: 'Paye' | 'EnRetard' | 'EnAttente';
+}
+
+function groupInvoicesByMonth(invoices: Invoice[]): FeeMonthGroup[] {
+  const byMonth = invoices.reduce<Record<string, FeeMonthGroup>>((acc, invoice) => {
+    const group = (acc[invoice.feeScheduleId] ??= {
+      feeScheduleId: invoice.feeScheduleId,
+      dueDate: invoice.dueDate,
+      termName: invoice.academicTermName,
+      lines: [],
+      status: 'Paye',
+    });
+    group.lines.push(invoice);
+    return acc;
+  }, {});
+
+  return Object.values(byMonth)
+    .map((group) => {
+      const allPaid = group.lines.every((l) => l.status === 'Paye');
+      const isOverdue = new Date(group.dueDate) < new Date();
+      return { ...group, status: allPaid ? 'Paye' as const : isOverdue ? 'EnRetard' as const : 'EnAttente' as const };
+    })
+    .sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime());
 }
 
 // Un Parent voit les paiements de tous ses enfants ; un Élève ne voit que les siens (un seul "enfant" : lui-même).
@@ -68,6 +102,7 @@ export function Payments() {
   const [declaring, setDeclaring] = useState(false);
   const [decidingId, setDecidingId] = useState<string | null>(null);
   const [rejectNotes, setRejectNotes] = useState<Record<string, string>>({});
+  const declareFormRef = useRef<HTMLFormElement | null>(null);
 
   function loadDirectorPayments(year?: string) {
     return Promise.all([fetchPayments(50, year || undefined), fetchPendingPayments()]).then(([all, pendingList]) => {
@@ -112,16 +147,18 @@ export function Payments() {
       .catch(() => setStudentInvoices([]));
   }, [isDirector, form.studentId]);
 
-  const [declareInvoices, setDeclareInvoices] = useState<Invoice[]>([]);
+  const [childInvoices, setChildInvoices] = useState<Invoice[]>([]);
   useEffect(() => {
     if (!isParent || !declareForm.studentId) {
-      setDeclareInvoices([]);
+      setChildInvoices([]);
       return;
     }
     fetchStudentInvoices(declareForm.studentId)
-      .then((data) => setDeclareInvoices(data.filter((i) => i.status !== 'Paye')))
-      .catch(() => setDeclareInvoices([]));
+      .then(setChildInvoices)
+      .catch(() => setChildInvoices([]));
   }, [isParent, declareForm.studentId]);
+
+  const declareInvoices = childInvoices.filter((i) => i.status !== 'Paye');
 
   if (user?.role === 'Teacher') {
     return <Navigate to="/notes" replace />;
@@ -151,13 +188,18 @@ export function Payments() {
   }
 
   function handleDeclareInvoiceChange(invoiceId: string) {
-    const invoice = declareInvoices.find((i) => i.id === invoiceId);
+    const invoice = childInvoices.find((i) => i.id === invoiceId);
     setDeclareForm((prev) => ({
       ...prev,
       invoiceId,
       amount: invoice ? String(invoice.totalAmount) : prev.amount,
-      description: invoice ? `${invoice.feeStructureName} — ${invoice.academicTermName}` : prev.description,
+      description: invoice ? `${invoice.feeCategoryName} — ${invoice.academicTermName}` : prev.description,
     }));
+  }
+
+  function handlePickInvoiceToPay(invoiceId: string) {
+    handleDeclareInvoiceChange(invoiceId);
+    declareFormRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
   async function handleDeclarePayment(event: FormEvent) {
@@ -234,11 +276,66 @@ export function Payments() {
 
       {isParent && (
         <div className="mt-6 rounded-2xl border border-border bg-surface p-6 shadow-sm">
+          <h2 className="text-base font-semibold text-slate">Calendrier des mois</h2>
+          <p className="mt-1 text-xs text-slate-soft">
+            Choisissez un enfant pour voir les mois payés et non payés de l'année scolaire.
+          </p>
+          <select
+            value={declareForm.studentId}
+            onChange={(e) => setDeclareForm({ ...declareForm, studentId: e.target.value, invoiceId: '', amount: '', description: '' })}
+            className={`${inputClass} mt-3`}
+          >
+            <option value="">Enfant...</option>
+            {students.map((s) => (
+              <option key={s.id} value={s.id}>{s.firstName} {s.lastName}</option>
+            ))}
+          </select>
+
+          {declareForm.studentId && (
+            <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+              {groupInvoicesByMonth(childInvoices).length === 0 && (
+                <p className="col-span-full text-sm text-slate-soft">Aucune facture générée pour cet enfant pour l'instant.</p>
+              )}
+              {groupInvoicesByMonth(childInvoices).map((group) => {
+                const unpaidLines = group.lines.filter((l) => l.status !== 'Paye');
+                return (
+                  <div key={group.feeScheduleId} className="rounded-xl border border-border p-3">
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="text-sm font-medium capitalize text-slate">{formatMonthLabel(group.dueDate)}</p>
+                      <StatusBadge status={group.status} />
+                    </div>
+                    <p className="mt-0.5 text-xs text-slate-soft">{group.termName}</p>
+                    {unpaidLines.length > 0 ? (
+                      <div className="mt-2 flex flex-col gap-1">
+                        {unpaidLines.map((line) => (
+                          <button
+                            key={line.id}
+                            type="button"
+                            onClick={() => handlePickInvoiceToPay(line.id)}
+                            className="rounded-lg border border-primary/40 px-2 py-1 text-left text-xs font-medium text-primary transition-colors hover:bg-primary-soft"
+                          >
+                            Payer {line.feeCategoryName} — {formatAmount(line.totalAmount)}
+                          </button>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="mt-2 text-xs text-success">Tout est réglé pour ce mois.</p>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
+      {isParent && (
+        <div className="mt-6 rounded-2xl border border-border bg-surface p-6 shadow-sm">
           <h2 className="text-base font-semibold text-slate">Déclarer un paiement</h2>
           <p className="mt-1 text-xs text-slate-soft">
             Réglé hors application (espèces remis à l'école, Mobile Money, virement) : le Directeur vérifiera et validera votre déclaration.
           </p>
-          <form onSubmit={handleDeclarePayment} className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-3">
+          <form ref={declareFormRef} onSubmit={handleDeclarePayment} className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-3">
             <select
               required
               value={declareForm.studentId}
